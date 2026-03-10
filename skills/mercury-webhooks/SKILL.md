@@ -76,7 +76,7 @@ Schema: `ApiWebhookResponse`
 ## GET /webhooks/{webhookEndpointId}
 
 **Operation:** `getWebhook`
-**Summary:** Get webhook endpoint by id
+**Summary:** Get webhook endpoint by ID
 **Description:** Retrieve details of a specific webhook endpoint by ID
 
 ### Parameters
@@ -95,7 +95,7 @@ Schema: `ApiWebhookResponse`
 
 **Operation:** `updateWebhook`
 **Summary:** Update an existing webhook endpoint
-**Description:** Update the configuration of an existing webhook endpoint
+**Description:** Update the configuration of an existing webhook endpoint. A webhook that has been disabled due to consecutive delivery failures can be reactivated by setting its status to 'active'.
 
 ### Parameters
 

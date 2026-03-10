@@ -1,5 +1,121 @@
 components:
   schemas:
+    APISafeRequest:
+      description: ' A summary of a SAFE request.'
+      properties:
+        canceledAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          nullable: true
+        discountRate:
+          multipleOf: 1.0e-2
+          nullable: true
+          type: number
+        documentUrl:
+          type: string
+        expiresAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+        governingState:
+          allOf:
+          - $ref: '#/components/schemas/USState'
+          nullable: true
+        id:
+          allOf:
+          - $ref: '#/components/schemas/SafeRequestId'
+        includesMostFavoredNationClause:
+          type: boolean
+        includesProRataRightsLetter:
+          type: boolean
+        investmentAmount:
+          allOf:
+          - $ref: '#/components/schemas/PositiveDollar'
+        investmentDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+        investor:
+          allOf:
+          - $ref: '#/components/schemas/APISafeRequestInvestor'
+        organization:
+          allOf:
+          - $ref: '#/components/schemas/APISafeRequestOrganization'
+        paidAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          nullable: true
+        signedByInvestorAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          nullable: true
+        signedByOwnerAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          nullable: true
+        valuationCap:
+          allOf:
+          - $ref: '#/components/schemas/PositiveDollar'
+          nullable: true
+        valuationType:
+          allOf:
+          - $ref: '#/components/schemas/ValuationType'
+      required:
+      - id
+      - documentUrl
+      - expiresAt
+      - includesMostFavoredNationClause
+      - includesProRataRightsLetter
+      - investmentAmount
+      - investor
+      - investmentDate
+      - organization
+      - valuationType
+      type: object
+    APISafeRequestInvestor:
+      description: ' Details about the investor buying the equity.'
+      properties:
+        additionalBylines:
+          nullable: true
+          type: string
+        address:
+          nullable: true
+          type: string
+        investorType:
+          allOf:
+          - $ref: '#/components/schemas/SafeRequestInvestorType'
+        legalEntityName:
+          type: string
+        signatoryEmail:
+          allOf:
+          - $ref: '#/components/schemas/Email'
+        signatoryName:
+          type: string
+        signatoryTitle:
+          nullable: true
+          type: string
+      required:
+      - signatoryName
+      - signatoryEmail
+      - legalEntityName
+      - investorType
+      type: object
+    APISafeRequestOrganization:
+      description: ' Details about the organization selling the equity'
+      properties:
+        legalEntityName:
+          type: string
+        signatoryEmail:
+          allOf:
+          - $ref: '#/components/schemas/Email'
+        signatoryName:
+          type: string
+        signatoryTitle:
+          type: string
+      required:
+      - legalEntityName
+      - signatoryName
+      - signatoryTitle
+      - signatoryEmail
+      type: object
     Account:
       properties:
         accountNumber:
@@ -90,69 +206,10 @@ components:
       required:
       - cards
       type: object
-    AccountStatement:
-      properties:
-        companyLegalAddress:
-          allOf:
-          - $ref: '#/components/schemas/Address'
-        companyLegalName:
-          type: string
-        details:
-          allOf:
-          - $ref: '#/components/schemas/AccountStatementPayload'
-        downloadUrl:
-          type: string
-        ein:
-          nullable: true
-          type: string
-        endDate:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-        endingBalance:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-        id:
-          allOf:
-          - $ref: '#/components/schemas/AccountStatementId'
-        startDate:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-        transactions:
-          items:
-            $ref: '#/components/schemas/AccountStatementTransaction'
-          type: array
-      required:
-      - startDate
-      - endDate
-      - companyLegalName
-      - companyLegalAddress
-      - endingBalance
-      - details
-      - downloadUrl
-      - id
-      - transactions
-      type: object
     AccountStatementId:
       description: ID for the account statement
       format: uuid
       type: string
-    AccountStatementPayload:
-      description: Account statement payload with type discriminator
-      properties:
-        accountDetails:
-          description: Account-specific details based on accountType
-          oneOf:
-          - $ref: '#/components/schemas/DepositoryAccountStatementPayload'
-          - $ref: '#/components/schemas/CreditAccountStatementPayload'
-        accountType:
-          enum:
-          - Depository
-          - Credit
-          type: string
-      required:
-      - accountType
-      - accountDetails
-      type: object
     AccountStatementTransaction:
       properties:
         createdAt:
@@ -169,15 +226,6 @@ components:
       - id
       - createdAt
       type: object
-    AccountStatementsResponse:
-      properties:
-        statements:
-          items:
-            $ref: '#/components/schemas/AccountStatement'
-          type: array
-      required:
-      - statements
-      type: object
     AccountStatus:
       enum:
       - active
@@ -191,14 +239,28 @@ components:
       - external
       - recipient
       type: string
-    AccountsResponse:
+    AccountsPaginatedResponse:
+      description: |2-
+         Paginated response containing a list of accounts.
+         | Use the page cursor information to fetch additional pages of accounts.
       properties:
         accounts:
+          description: ' List of accounts in the current page'
           items:
             $ref: '#/components/schemas/Account'
           type: array
+        page:
+          description: ' Pagination information including cursors for navigating to
+            next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/TransactionPartyId'
+            previousPage:
+              $ref: '#/components/schemas/TransactionPartyId'
+          type: object
       required:
       - accounts
+      - page
       type: object
     AddRecipientRequest:
       properties:
@@ -338,7 +400,7 @@ components:
         id:
           allOf:
           - $ref: '#/components/schemas/ApiEventId'
-          description: ' Unique identifier for this event'
+          - description: ' Unique identifier for this event'
         mergePatch:
           description: ' JSON object containing the fields that were changed and their
             new values'
@@ -346,11 +408,12 @@ components:
         occurredAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' Timestamp when the event occurred'
+          - description: ' Timestamp when the event occurred'
         operationType:
           allOf:
           - $ref: '#/components/schemas/ApiEventOperationType'
-          description: ' The type of operation performed (e.g., create, update, delete)'
+          - description: ' The type of operation performed (e.g., create, update,
+              delete)'
         previousValues:
           description: ' JSON object containing the fields that were changed and their
             previous values before the update'
@@ -359,16 +422,16 @@ components:
         resourceId:
           allOf:
           - $ref: '#/components/schemas/UUID'
-          description: ' The ID of the resource that was affected'
+          - description: ' The ID of the resource that was affected'
         resourceType:
           allOf:
           - $ref: '#/components/schemas/ApiEventResourceType'
-          description: ' The type of resource that was affected (e.g., transaction,
-            account)'
+          - description: ' The type of resource that was affected (e.g., transaction,
+              account)'
         resourceVersion:
           allOf:
           - $ref: '#/components/schemas/ResourceVersion'
-          description: ' Version number of the resource after this change'
+          - description: ' Version number of the resource after this change'
       required:
       - id
       - resourceType
@@ -390,10 +453,14 @@ components:
             $ref: '#/components/schemas/ApiEventResponse'
           type: array
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
           description: ' Pagination information including cursors for navigating to
             next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/ApiEventId'
+            previousPage:
+              $ref: '#/components/schemas/ApiEventId'
+          type: object
       required:
       - events
       - page
@@ -415,13 +482,13 @@ components:
         categoryId:
           allOf:
           - $ref: '#/components/schemas/CategoryId'
-          description: ' How to update the transaction''s category. Omit field to
-            keep current, send null to clear, send ID to set.'
+          - description: ' How to update the transaction''s category. Omit field to
+              keep current, send null to clear, send ID to set.'
         note:
           allOf:
           - $ref: '#/components/schemas/NoteUpdate'
-          description: ' How to update the transaction''s note. Omit field to keep
-            current, send null/empty to clear, send text to set.'
+          - description: ' How to update the transaction''s note. Omit field to keep
+              current, send null/empty to clear, send text to set.'
       required:
       - note
       - categoryId
@@ -441,14 +508,14 @@ components:
          for where to download it will be in this object.
       properties:
         fileName:
-          description: ' The filename for the file'
+          description: ' The filename for the file.'
           type: string
         id:
           allOf:
           - $ref: '#/components/schemas/AttachmentId'
-          description: ' The id of the attachment object'
+          - description: ' The ID of the attachment object.'
         url:
-          description: ' The signed download URL for the file itself'
+          description: ' The signed download URL for the file itself.'
           type: string
       required:
       - id
@@ -470,26 +537,26 @@ components:
       description: ' Customer address information for Accounts Receivable API'
       properties:
         address1:
-          description: ' Primary street address line'
+          description: ' Primary street address line.'
           type: string
         address2:
-          description: ' Secondary street address line (optional)'
+          description: ' Secondary street address line (optional).'
           nullable: true
           type: string
         city:
-          description: ' City name'
+          description: ' City name.'
           type: string
         country:
           allOf:
           - $ref: '#/components/schemas/ISO3166Alpha2'
-          description: ' Country code in ISO 3166-1 alpha-2 format'
+          - description: ' Two-letter country code (ISO 3166-1 alpha-2).'
         postalCode:
           description: ' Postal or ZIP code'
           type: string
         region:
           allOf:
           - $ref: '#/components/schemas/Region'
-          description: ' State, province, or region'
+          - description: ' State, province, or region.'
       required:
       - address1
       - city
@@ -501,19 +568,19 @@ components:
       description: ' Address input for creating or updating customers'
       properties:
         address1:
-          description: ' The first line of the address.'
+          description: ' Primary street address line.'
           type: string
         address2:
-          description: ' The second line of the address, if applicable.'
+          description: ' Secondary street address line (optional).'
           nullable: true
           type: string
         city:
-          description: ' The city name.'
+          description: ' City name.'
           type: string
         country:
           allOf:
           - $ref: '#/components/schemas/ISO3166Alpha2'
-          description: ' Two-letter country code (ISO 3166-1 alpha-2).'
+          - description: ' Two-letter country code (ISO 3166-1 alpha-2).'
         name:
           description: ' The mailing name of the address.'
           type: string
@@ -523,8 +590,8 @@ components:
         region:
           allOf:
           - $ref: '#/components/schemas/Region'
-          description: ' Either a two-letter US state code i.e. "CA" for California
-            or a free-form identification of a particular region worldwide.'
+          - description: ' Either a two-letter US state code i.e. "CA" for California
+              or a free-form identification of a particular region worldwide.'
       required:
       - name
       - address1
@@ -539,18 +606,39 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/ApiV1ArCustomerAddressInput'
-          description: ' The address for the customer'
+          - description: ' The address for the customer.'
           nullable: true
         email:
           allOf:
           - $ref: '#/components/schemas/Email'
-          description: ' The email address for the customer'
+          - description: ' The email address for the customer.'
         name:
-          description: ' The name of the customer'
+          description: ' The name of the customer.'
           type: string
       required:
       - name
       - email
+      type: object
+    ApiV1ArCustomerPaginatedResponseData:
+      description: ' Paginated response data for Accounts Receivable customers API
+        endpoint'
+      properties:
+        customers:
+          description: ' The list of customers for this page'
+          items:
+            $ref: '#/components/schemas/ApiV1ArCustomerResponseData'
+          type: array
+        page:
+          description: ' Pagination cursors for navigating to next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/CustomerId'
+            previousPage:
+              $ref: '#/components/schemas/CustomerId'
+          type: object
+      required:
+      - customers
+      - page
       type: object
     ApiV1ArCustomerResponseData:
       description: ' Response data for Accounts Receivable customer API endpoints'
@@ -558,23 +646,23 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/ApiV1ArCustomerAddress'
-          description: ' Address of customer'
+          - description: ' Address of customer.'
           nullable: true
         deletedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The time the customer was deleted, if it was deleted'
+          - description: ' The time the customer was deleted, if it was deleted.'
           nullable: true
         email:
           allOf:
           - $ref: '#/components/schemas/Email'
-          description: ' Email of customer'
+          - description: ' Email of customer.'
         id:
           allOf:
           - $ref: '#/components/schemas/CustomerId'
-          description: ' ArCustomerId'
+          - description: ' ArCustomerId'
         name:
-          description: ' Name of customer'
+          description: ' Name of customer.'
           type: string
       required:
       - id
@@ -587,35 +675,24 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/ApiV1ArCustomerAddressInput'
-          description: ' The address for the customer'
+          - description: ' The address for the customer.'
           nullable: true
         email:
           allOf:
           - $ref: '#/components/schemas/Email'
-          description: ' The email address for the customer'
+          - description: ' The email address for the customer.'
         name:
-          description: ' The name of the customer'
+          description: ' The name of the customer.'
           type: string
         resendOpenInvoices:
           description: |2-
              Open invoices for the customer will be resent with updated data
-             when this is true
+             when this is true.
           type: boolean
       required:
       - name
       - email
       - resendOpenInvoices
-      type: object
-    ApiV1ArCustomersResponseData:
-      description: ' Response data for Accounts Receivable customers API endpoint'
-      properties:
-        customers:
-          description: ' The list of customers'
-          items:
-            $ref: '#/components/schemas/ApiV1ArCustomerResponseData'
-          type: array
-      required:
-      - customers
       type: object
     ApiV1ArInvoiceCreateRequest:
       description: ' The request body to create an invoice.'
@@ -635,16 +712,17 @@ components:
         customerId:
           allOf:
           - $ref: '#/components/schemas/CustomerId'
-          description: ' Id of the customer the invoice was sent to.'
+          - description: ' Id of the customer the invoice was sent to.'
         destinationAccountId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
-          description: ' The id of the destination account where money will be paid
-            to for this invoice.'
+          - description: ' The Mercury account where invoice payments will be deposited.
+              Use the /api/v1/accounts endpoint to list your accounts and find the
+              corresponding id. Only checking and savings accounts are supported.'
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The due date the invoice should be paid by. YYYY-MM-DD'
+          - description: ' The due date the invoice should be paid by. YYYY-MM-DD'
         internalNote:
           description: ' Internal note for the invoice, visible by users in the organization
             but not visible to payers.'
@@ -653,9 +731,9 @@ components:
         invoiceDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The date of the invoice, set by the invoice creator and likely
-            to be context specific to the type of transaction. For example, it could
-            be a date a service was performed. YYYY-MM-DD'
+          - description: ' The date of the invoice, set by the invoice creator and
+              likely to be context specific to the type of transaction. For example,
+              it could be a date a service was performed. YYYY-MM-DD'
         invoiceNumber:
           description: ' The payer facing invoice number/identifier.'
           nullable: true
@@ -676,9 +754,21 @@ components:
         sendEmailOption:
           allOf:
           - $ref: '#/components/schemas/ApiSendEmailOption'
-          description: ' Rules for emailing the new invoice to payers. Can be "DontSend"
-            to skip sending or "SendNow" to send immediately. If omitted, defaults
-            to sending immediately.'
+          - description: ' Rules for emailing the new invoice to payers. Can be "DontSend"
+              to skip sending or "SendNow" to send immediately. If omitted, defaults
+              to sending immediately.'
+          nullable: true
+        servicePeriodEndDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The end date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
+          nullable: true
+        servicePeriodStartDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The start date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
           nullable: true
         useRealAccountNumber:
           description: ' Whether or not the invoice payment instructions will show
@@ -706,11 +796,11 @@ components:
         amount:
           allOf:
           - $ref: '#/components/schemas/NonNegativeDollar'
-          description: ' The total amount of the invoice line items plus taxes.'
+          - description: ' The total amount of the invoice line items plus taxes.'
         canceledAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The time when the invoice was canceled.'
+          - description: ' The time when the invoice was canceled.'
           nullable: true
         ccEmails:
           description: ' Emails to be CCed on invoice notifications/reminders.'
@@ -720,7 +810,7 @@ components:
         createdAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The timestamp when the invoice was created.'
+          - description: ' The timestamp when the invoice was created.'
         creditCardEnabled:
           description: |2-
              Whether or not the invoice can be paid via credit card. Requires stripe to be
@@ -729,20 +819,21 @@ components:
         customerId:
           allOf:
           - $ref: '#/components/schemas/CustomerId'
-          description: ' Id of the customer the invoice was sent to.'
+          - description: ' Id of the customer the invoice was sent to.'
         destinationAccountId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
-          description: ' The id of the destintation account where money will be paid
-            to for this invoice.'
+          - description: ' The Mercury account where invoice payments will be deposited.
+              Use the /api/v1/accounts endpoint to list your accounts and find the
+              corresponding id. Only checking and savings accounts are supported.'
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The due date the invoice should be paid by.'
+          - description: ' The due date the invoice should be paid by.'
         id:
           allOf:
           - $ref: '#/components/schemas/InvoiceId'
-          description: ' The Id of the invoice.'
+          - description: ' The ID of the invoice.'
         internalNote:
           description: |2-
              Internal note for the invoice, visible by users in the
@@ -752,11 +843,11 @@ components:
         invoiceDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: |2-
-             The date of the invoice, set by the invoice creator
-             and likely to be context specific to the type of transaction.
-             i.e. it could be a date a service was performed, it does not need
-             to be the date the invoice was created.
+          - description: |2-
+               The date of the invoice, set by the invoice creator
+               and likely to be context specific to the type of transaction.
+               i.e. it could be a date a service was performed, it does not need
+               to be the date the invoice was created.
         invoiceNumber:
           description: ' The payer facing invoice number/identifier.'
           type: string
@@ -773,6 +864,18 @@ components:
           description: ' Purchase order number for the invoice if applicable.'
           nullable: true
           type: string
+        servicePeriodEndDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The end date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
+          nullable: true
+        servicePeriodStartDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The start date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
+          nullable: true
         slug:
           description: |2-
              Public slug for an invoice. Used to construct the pay page URL
@@ -781,11 +884,11 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/PaymentLinkStatus'
-          description: ' The status of the invoice.'
+          - description: ' The status of the invoice.'
         updatedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The timestamp when the invoice was updated.'
+          - description: ' The timestamp when the invoice was updated.'
         useRealAccountNumber:
           description: |2-
              Whether or not the invoice payment instructions will show the real
@@ -828,7 +931,7 @@ components:
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The date the invoice should be paid by. YYYY-MM-DD'
+          - description: ' The date the invoice should be paid by. YYYY-MM-DD'
         internalNote:
           description: ' Internal note for the invoice, visible by users in the organization
             but not visible to payers.'
@@ -837,9 +940,9 @@ components:
         invoiceDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The date of the invoice, set by the invoice creator. Does
-            not have to be the day the invoice was created. It can be business specific
-            i.e. service/sale date. YYYY-MM-DD'
+          - description: ' The date of the invoice, set by the invoice creator. Does
+              not have to be the day the invoice was created. It can be business specific
+              i.e. service/sale date. YYYY-MM-DD'
         invoiceNumber:
           description: ' The invoice number.'
           type: string
@@ -856,6 +959,18 @@ components:
           description: ' The purchase order number for the invoice if applicable.'
           nullable: true
           type: string
+        servicePeriodEndDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The end date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
+          nullable: true
+        servicePeriodStartDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The start date for the service period this invoice covers,
+              if applicable. YYYY-MM-DD'
+          nullable: true
         useRealAccountNumber:
           description: ' Whether or not the invoice payment instructions will show
             the real account and routing number for the destination account or use
@@ -880,11 +995,11 @@ components:
         amount:
           allOf:
           - $ref: '#/components/schemas/NonNegativeDollar'
-          description: ' The total amount of the invoice line items plus taxes'
+          - description: ' The total amount of the invoice line items plus taxes'
         canceledAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The time when the invoice was canceled'
+          - description: ' The time when the invoice was canceled.'
           nullable: true
         ccEmails:
           description: ' Emails to be CCed on invoice notifications/reminders.'
@@ -894,7 +1009,7 @@ components:
         createdAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The timestamp when the invoice was created'
+          - description: ' The timestamp when the invoice was created.'
         creditCardEnabled:
           description: |2-
              Whether or not the invoice can be paid via credit card. Requires stripe to be
@@ -903,20 +1018,21 @@ components:
         customerId:
           allOf:
           - $ref: '#/components/schemas/CustomerId'
-          description: ' Id of the customer the invoice was sent to.'
+          - description: ' Id of the customer the invoice was sent to.'
         destinationAccountId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
-          description: ' The id of the destintation account where money will be paid
-            to for this invoice'
+          - description: ' The Mercury account where invoice payments will be deposited.
+              Use the /api/v1/accounts endpoint to list your accounts and find the
+              corresponding id. Only checking and savings accounts are supported.'
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' The due date the invoice should be paid by.'
+          - description: ' The due date the invoice should be paid by.'
         id:
           allOf:
           - $ref: '#/components/schemas/InvoiceId'
-          description: ' The Id of the invoice.'
+          - description: ' The ID of the invoice.'
         internalNote:
           description: |2-
              Internal note for the invoice, visible by users in the
@@ -926,11 +1042,11 @@ components:
         invoiceDate:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: |2-
-             The date of the invoice, set by the invoice creator
-             and likely to be context specific to the type of transaction.
-             i.e. it could be a date a service was performed, it does not need
-             to be the date the invoice was created.
+          - description: |2-
+               The date of the invoice, set by the invoice creator
+               and likely to be context specific to the type of transaction.
+               i.e. it could be a date a service was performed, it does not need
+               to be the date the invoice was created.
         invoiceNumber:
           description: ' The payer facing invoice number/identifier.'
           type: string
@@ -943,18 +1059,18 @@ components:
           nullable: true
           type: string
         slug:
-          description: |2-
-             public slug for an invoice. Used to construct the pay page URL
-             as well as the URL to retrieve the PDF of the invoice.
+          description: ' A unique identifier used to build public URLs for this invoice.
+            Use it to construct the payment page URL (https://app.mercury.com/pay/{slug})
+            or fetch the invoice PDF via /api/v1/ar/invoices/{slug}/pdf.'
           type: string
         status:
           allOf:
           - $ref: '#/components/schemas/PaymentLinkStatus'
-          description: ' The status of the invoice'
+          - description: ' The status of the invoice.'
         updatedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' The timestamp when the invoice was updated'
+          - description: ' The timestamp when the invoice was updated.'
         useRealAccountNumber:
           description: |2-
              Whether or not the invoice payment instructions will show the real
@@ -978,18 +1094,28 @@ components:
       - createdAt
       - updatedAt
       type: object
-    ApiV1ArInvoicesResponseData:
+    ApiV1ArInvoicesPaginatedResponse:
       description: |2-
-         The top level response type for the get invoices
-         public invoices endpoint.
+         Paginated response containing a list of invoices.
+         | Use the page cursor information to fetch additional pages of invoices.
       properties:
         invoices:
-          description: ' The list of invoices'
+          description: ' List of invoices in the current page'
           items:
             $ref: '#/components/schemas/ApiV1ArInvoicesData'
           type: array
+        page:
+          description: ' Pagination information including cursors for navigating to
+            next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/InvoiceId'
+            previousPage:
+              $ref: '#/components/schemas/InvoiceId'
+          type: object
       required:
       - invoices
+      - page
       type: object
     ApiV1ArLineItemData:
       description: ' Data for an invoice line item'
@@ -1009,7 +1135,7 @@ components:
         unitPrice:
           allOf:
           - $ref: '#/components/schemas/Dollar'
-          description: ' the price of one unit of the item before sales tax'
+          - description: ' the price of one unit of the item before sales tax'
       required:
       - name
       - unitPrice
@@ -1025,43 +1151,25 @@ components:
         createdAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' When the webhook was created'
+          - description: ' When the webhook was created'
         eventTypes:
           description: ' Optional array of event types this webhook is subscribed
             to. Nothing means all events.'
           items:
-            enum:
-            - transaction.created
-            - transaction.updated
-            type: string
+            $ref: '#/components/schemas/WebhookEventType'
           nullable: true
           type: array
         filterPaths:
           description: ' Optional array of resource field paths to filter events by.
             Nothing means no filtering.'
           items:
-            enum:
-            - transaction.amount
-            - transaction.bankDescription
-            - transaction.categoryData
-            - transaction.customCategory
-            - transaction.customCategory.id
-            - transaction.customCategory.name
-            - transaction.mercuryCategory
-            - transaction.estimatedDeliveryDate
-            - transaction.externalMemo
-            - transaction.failedAt
-            - transaction.note
-            - transaction.postedAt
-            - transaction.reasonForFailure
-            - transaction.status
-            type: string
+            $ref: '#/components/schemas/ResourceField'
           nullable: true
           type: array
         id:
           allOf:
           - $ref: '#/components/schemas/ApiWebhookEndpointId'
-          description: ' Unique identifier for the webhook endpoint'
+          - description: ' Unique identifier for the webhook endpoint'
         secret:
           description: ' Webhook signing secret. Only returned on creation (POST),
             not on GET or UPDATE operations.'
@@ -1070,11 +1178,11 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/ApiWebhookStatus'
-          description: ' Current status of the webhook (active, paused, or disabled)'
+          - description: ' Current status of the webhook (active, paused, or disabled)'
         updatedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' When the webhook was last updated'
+          - description: ' When the webhook was last updated'
         url:
           description: ' The URL that will receive webhook POST requests'
           type: string
@@ -1086,6 +1194,10 @@ components:
       - updatedAt
       type: object
     ApiWebhookStatus:
+      description: 'The status of the webhook endpoint. ''active'': delivering events
+        normally. ''paused'': paused by the user. ''disabled'': automatically disabled
+        by the system due to consecutive delivery failures. A disabled webhook can
+        be reactivated by updating its status to ''active''.'
       enum:
       - active
       - paused
@@ -1095,10 +1207,14 @@ components:
       description: ' API response for listing webhook endpoints with pagination'
       properties:
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
           description: ' Pagination information including cursors for navigating to
             next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/ApiWebhookEndpointId'
+            previousPage:
+              $ref: '#/components/schemas/ApiWebhookEndpointId'
+          type: object
         webhooks:
           description: ' List of webhooks in the current page'
           items:
@@ -1109,9 +1225,931 @@ components:
       - page
       type: object
     AttachmentId:
-      description: ID for the attachment
+      description: ID for the attachment.
       format: uuid
       type: string
+    BooksAPICreateJournalEntryLineEntry:
+      description: ' A line entry within a journal entry creation request.'
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount for this line entry'
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Whether this line entry is a debit or credit'
+        description:
+          description: ' Description of the line entry'
+          format: size < 4001
+          type: string
+        ledgerId:
+          description: ' The ledger this line entry is posted to'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        tagIds:
+          description: ' Optional tags to associate with this line entry'
+          items:
+            description: unique id for a tag
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+      required:
+      - amount
+      - debitCredit
+      - description
+      - ledgerId
+      type: object
+    BooksAPIUpdateJournalEntryChanges:
+      description: ' Line entry changes to apply to a journal entry: create, update,
+        or delete.'
+      properties:
+        create:
+          description: ' New line entries to add'
+          items:
+            $ref: '#/components/schemas/BooksAPIUpdateJournalEntryLECreate'
+          nullable: true
+          type: array
+        delete:
+          description: ' IDs of line entries to remove'
+          items:
+            description: unique id for a line entry
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+        update:
+          description: ' Existing line entries to modify'
+          items:
+            $ref: '#/components/schemas/BooksAPIUpdateJournalEntryLEUpdate'
+          nullable: true
+          type: array
+      type: object
+    BooksAPIUpdateJournalEntryLECreate:
+      description: ' A new line entry to create within an existing journal entry.'
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount for this line entry'
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Whether this line entry is a debit or credit'
+        description:
+          description: ' Description of the line entry'
+          format: size < 4001
+          type: string
+        ledgerId:
+          description: ' The ledger this line entry is posted to'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        tagIds:
+          description: ' Optional tags to associate with this line entry'
+          items:
+            description: unique id for a tag
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+      required:
+      - amount
+      - debitCredit
+      - description
+      - ledgerId
+      type: object
+    BooksAPIUpdateJournalEntryLEUpdate:
+      description: ' Updates to apply to an existing line entry.'
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' Updated amount'
+          nullable: true
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Updated debit/credit designation'
+          nullable: true
+        description:
+          description: ' Updated description'
+          format: size < 4001
+          nullable: true
+          type: string
+        id:
+          description: ' The ID of the line entry to update'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        ledgerId:
+          description: ' Updated ledger'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        tagIds:
+          description: ' Updated tags'
+          items:
+            description: unique id for a tag
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+      required:
+      - id
+      type: object
+    BooksAccountingBasis:
+      enum:
+      - cash
+      - accrual
+      type: string
+    BooksAccrualSourceBaseResponse:
+      description: |2-
+         An accrual source is a record of a financial transaction that has been recorded (e.g. invoice or bill)
+         | It used to generate journal entries in books and tracking payments against it.
+      properties:
+        amountOutstanding:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount outstanding'
+        amountPaid:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount of payments made against the accrual source.'
+        dueDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The due date of the accrual source (e.g invoice/bill due
+              date)'
+          nullable: true
+        effectiveDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The effective date of the accrual source (e.g invoice/bill
+              date)'
+        externalId:
+          description: ' The external ID of the accrual source, if applicable'
+          nullable: true
+          type: string
+        externalPartyId:
+          allOf:
+          - $ref: '#/components/schemas/BooksExternalPartyId'
+          - description: ' The external party ID of the accrual source'
+          nullable: true
+        grossAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The gross amount of the accrual source. Total of all lines.'
+        id:
+          description: ' The ID of the accrual source'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        instanceId:
+          description: ' The ID of the instance'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        lines:
+          description: ' The lines that make up the accrual source. At least one line
+            is required.'
+          items:
+            $ref: '#/components/schemas/BooksAccrualSourceLine'
+          nullable: true
+          type: array
+        notes:
+          description: ' Optional notes or memo for the accrual source'
+          nullable: true
+          type: string
+        referenceNumber:
+          description: ' The reference number of the accrual source'
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceStatus'
+          - description: ' The status of the accrual source'
+        type:
+          description: ' The type of the accrual source'
+          enum:
+          - invoice
+          - bill
+          - payroll
+          type: string
+      required:
+      - id
+      - instanceId
+      - referenceNumber
+      - type
+      - status
+      - effectiveDate
+      - grossAmount
+      - amountPaid
+      - amountOutstanding
+      type: object
+    BooksAccrualSourceFile:
+      description: ' A file associated with an accrual source'
+      properties:
+        fileName:
+          description: ' The name of the file'
+          type: string
+        id:
+          description: ' The ID of the accrual source file'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      required:
+      - id
+      - fileName
+      type: object
+    BooksAccrualSourceLine:
+      description: ' A line item in an accrual source'
+      properties:
+        accountId:
+          description: ' The ID of the ledger'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        accrualSourceId:
+          description: ' The ID of the accrual source'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount of the accrual source line'
+        description:
+          description: ' The description of the accrual source line'
+          type: string
+        externalId:
+          description: ' The external ID of the accrual source line. This is the ID
+            of the accrual source line in an external system.'
+          nullable: true
+          type: string
+        id:
+          description: ' The ID of the accrual source line'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        lineNumber:
+          description: ' The line number. Used for maintaining a consistent order
+            of lines within an accrual source.'
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          type: integer
+      required:
+      - id
+      - accrualSourceId
+      - accountId
+      - lineNumber
+      - description
+      - amount
+      type: object
+    BooksAccrualSourcePaymentApplication:
+      description: ' Payment application for an accrual source'
+      properties:
+        adjustments:
+          description: ' Applicable adjustments'
+          items:
+            $ref: '#/components/schemas/BooksPaymentApplicationAccrualAdjustment'
+          type: array
+        lineEntry:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourcePaymentApplicationLineEntry'
+          - description: ' Metadata for the line entry for this payment application'
+        matchedAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' What amount of the line entry is applied as a payment to
+              the accrual source'
+        paymentApplicationId:
+          description: ' The ID of the payment application'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        sourceType:
+          description: ' The source type of the payment application'
+          enum:
+          - bankTransaction
+          - customerCredit
+          - manual
+          type: string
+        status:
+          description: ' The status of the payment application'
+          enum:
+          - proposed
+          - confirmed
+          - rejected
+          type: string
+      required:
+      - paymentApplicationId
+      - matchedAmount
+      - lineEntry
+      - status
+      - sourceType
+      - adjustments
+      type: object
+    BooksAccrualSourcePaymentApplicationLineEntry:
+      description: ' Line entry metadata for an accrual source payment application'
+      properties:
+        journalEntryDescription:
+          description: ' The description of the journal entry'
+          type: string
+        journalEntryId:
+          description: ' The ID of the line entry''s journal entry'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        lineEntryAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount of the line entry'
+        lineEntryDescription:
+          description: ' The description of the line entry'
+          type: string
+        lineEntryId:
+          description: ' The ID of the line entry'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      required:
+      - lineEntryId
+      - lineEntryDescription
+      - lineEntryAmount
+      - journalEntryId
+      - journalEntryDescription
+      type: object
+    BooksAccrualSourceResponse:
+      description: |2-
+         An accrual source is a record of a financial transaction that has been recorded (e.g. invoice or bill)
+         | It used to generate journal entries in books and tracking payments against it.
+      properties:
+        amountOutstanding:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount outstanding'
+        amountPaid:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The amount of payments made against the accrual source.'
+        dueDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The due date of the accrual source (e.g invoice/bill due
+              date)'
+          nullable: true
+        effectiveDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The effective date of the accrual source (e.g invoice/bill
+              date)'
+        externalId:
+          description: ' The external ID of the accrual source, if applicable'
+          nullable: true
+          type: string
+        externalPartyId:
+          allOf:
+          - $ref: '#/components/schemas/BooksExternalPartyId'
+          - description: ' The external party ID of the accrual source'
+          nullable: true
+        files:
+          description: ' The files associated with the accrual source, if any'
+          items:
+            $ref: '#/components/schemas/BooksAccrualSourceFile'
+          nullable: true
+          type: array
+        grossAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The gross amount of the accrual source. Total of all lines.'
+        id:
+          description: ' The ID of the accrual source'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        instanceId:
+          description: ' The ID of the instance'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        journalEntryIds:
+          description: ' The journal entry IDs generated from the accrual source.'
+          items:
+            description: unique id for a journal entry
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          type: array
+        lines:
+          description: ' The lines that make up the accrual source. At least one line
+            is required.'
+          items:
+            $ref: '#/components/schemas/BooksAccrualSourceLine'
+          nullable: true
+          type: array
+        notes:
+          description: ' Optional notes or memo for the accrual source'
+          nullable: true
+          type: string
+        paymentApplications:
+          description: ' Payments applied to the accrual source'
+          items:
+            $ref: '#/components/schemas/BooksAccrualSourcePaymentApplication'
+          nullable: true
+          type: array
+        referenceNumber:
+          description: ' The reference number of the accrual source'
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceStatus'
+          - description: ' The status of the accrual source'
+        type:
+          description: ' The type of the accrual source'
+          enum:
+          - invoice
+          - bill
+          - payroll
+          type: string
+      required:
+      - id
+      - instanceId
+      - referenceNumber
+      - type
+      - status
+      - effectiveDate
+      - grossAmount
+      - amountPaid
+      - amountOutstanding
+      - journalEntryIds
+      type: object
+    BooksAccrualSourceStatus:
+      enum:
+      - open
+      - paid
+      - draft
+      type: string
+    BooksChartOfAccountsTemplate:
+      description: ' A chart of accounts template'
+      properties:
+        accountingBasis:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccountingBasis'
+          - description: ' The accounting basis of the template'
+        id:
+          description: ' The ID of the template'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        name:
+          description: ' The name of the template'
+          type: string
+        type:
+          allOf:
+          - $ref: '#/components/schemas/BooksChartOfAccountsTemplateType'
+          - description: ' Whether this template belongs to an agent or a platform'
+      required:
+      - id
+      - name
+      - type
+      - accountingBasis
+      type: object
+    BooksChartOfAccountsTemplateType:
+      enum:
+      - agent
+      - platform
+      type: string
+    BooksCounterpartyId:
+      description: ID for this books counterparty
+      format: uuid
+      type: string
+    BooksDebitCredit:
+      enum:
+      - debit
+      - credit
+      type: string
+    BooksExternalPartyId:
+      oneOf:
+      - properties:
+          contents:
+            $ref: '#/components/schemas/BooksCounterpartyId'
+          tag:
+            enum:
+            - counterpartyId
+            type: string
+        required:
+        - tag
+        - contents
+        title: BooksExternalPartyIdCounterpartyId
+        type: object
+      - properties:
+          contents:
+            $ref: '#/components/schemas/CustomerId'
+          tag:
+            enum:
+            - customerId
+            type: string
+        required:
+        - tag
+        - contents
+        title: BooksExternalPartyIdCustomerId
+        type: object
+    BooksFinancialAccountType:
+      enum:
+      - bankAccount
+      - creditCard
+      - payments
+      - payroll
+      - loan
+      - prepaidCard
+      - accountsReceivable
+      - accountsPayable
+      - investment
+      - treasury
+      type: string
+    BooksJournalEntry:
+      properties:
+        accrualSource:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceResponse'
+          - description: ' The accrual source for the journal entry, if applicable.
+              Included in expanded responses.'
+          nullable: true
+        creationDate:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' The date and time the journal entry was created'
+        creationSource:
+          allOf:
+          - $ref: '#/components/schemas/BooksJournalEntryCreationSource'
+          - description: |2-
+               The source that created a journal entry.
+
+                 - `manual`: Created manually by the user via the UI.
+                 - `transaction`: Created automatically from a transaction categorization (e.g., Plaid sync).
+                 - `accrual`: Created automatically as part of an accrual workflow.
+                 - `paymentApplication`: Created automatically as part of a payment application workflow.
+                 - `legacy`: Created automatically from the old AR/AP system (receivables/payables).
+        datetime:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' The datetime the Journal Entry was created in UTC time'
+        description:
+          description: ' An arbitrary string on the object, useful for displaying
+            to the user.'
+          format: size < 513
+          type: string
+        id:
+          description: ' The unique ID of the object.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        isOpeningBalance:
+          description: ' Whether the Journal Entry represents an opening balance.'
+          type: boolean
+        lineEntries:
+          description: ' List of Line Entries. Included in expanded responses.'
+          items:
+            $ref: '#/components/schemas/BooksLineEntry'
+          nullable: true
+          type: array
+        lineEntryIds:
+          description: ' The ids of the Line Entries detailing the Journal Entry''s
+            movement of value.'
+          items:
+            description: unique id for a line entry
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+      required:
+      - id
+      - description
+      - datetime
+      - creationDate
+      - isOpeningBalance
+      - creationSource
+      type: object
+    BooksJournalEntryCreationSource:
+      enum:
+      - manual
+      - transaction
+      - accrual
+      - paymentApplication
+      - legacy
+      type: string
+    BooksLedgerSubType:
+      enum:
+      - currentAssets
+      - nonCurrentAssets
+      - transfersBetweenAccounts
+      - uncategorizedAssets
+      - currentLiabilities
+      - nonCurrentLiabilities
+      - equity
+      - operatingRevenues
+      - otherIncome
+      - costOfGoodsSold
+      - operatingExpenses
+      - otherExpenses
+      - retainedEarnings
+      type: string
+    BooksLedgerTemplate:
+      description: ' A ledger template within a Chart of Accounts template'
+      properties:
+        children:
+          description: ' Child ledger templates for hierarchical organization'
+          items:
+            $ref: '#/components/schemas/BooksLedgerTemplate'
+          nullable: true
+          type: array
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Whether this ledger increases with debits or credits'
+        editable:
+          description: ' Whether users can edit this ledger'
+          type: boolean
+        financialAccountType:
+          allOf:
+          - $ref: '#/components/schemas/BooksFinancialAccountType'
+          - description: ' The financial account type classification'
+          nullable: true
+        id:
+          description: ' Unique identifier for the ledger template'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        isRequired:
+          description: ' Whether this ledger is required in all COA instances'
+          type: boolean
+        name:
+          description: ' Name of the ledger'
+          type: string
+        parentId:
+          description: ' Parent ledger ID for hierarchical organization'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        reportCashFlow:
+          description: ' Whether to include this ledger in cash flow reports'
+          type: boolean
+        sortCode:
+          description: ' Sort code for ordering ledgers'
+          type: string
+        subType:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerSubType'
+          - description: ' The sub-type classification of the ledger'
+        type:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerType'
+          - description: ' The type of ledger (asset, liability, equity, revenue,
+              expense)'
+      required:
+      - id
+      - debitCredit
+      - editable
+      - isRequired
+      - name
+      - reportCashFlow
+      - sortCode
+      - subType
+      - type
+      type: object
+    BooksLedgerType:
+      enum:
+      - asset
+      - liability
+      - equity
+      - revenue
+      - expense
+      type: string
+    BooksLineEntry:
+      properties:
+        accrualSource:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceBaseResponse'
+          - description: ' Expandable. The accrual source for the line entry, if any.'
+          nullable: true
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The value of the line entry in decimal dollar cents.'
+        datetime:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' The datetime the Line Entry was created in UTC time.'
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Indicates if the amount is a credit or debit.'
+        description:
+          description: ' An arbitrary string on the object, useful for displaying
+            to the user or for categorization.'
+          format: size < 4001
+          nullable: true
+          type: string
+        editable:
+          description: ' Indicates if the Line Entry can be manually added or removed
+            from a Ledger, as dictated by the `editable` property on the Ledger.'
+          type: boolean
+        id:
+          description: ' The unique ID of the object.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        journalEntryDescription:
+          description: ' An arbitrary string on the object, useful for displaying
+            to the user.'
+          format: size < 513
+          type: string
+        journalEntryId:
+          description: ' The ID of the associated Journal Entry.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        ledgerId:
+          description: ' The ID of the Line Entry''s Ledger.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        ledgerName:
+          description: ' The name of the Line Entry''s Ledger.'
+          type: string
+        opposingLedgerIds:
+          description: ' Expandable. IDs of the ledgers on the other side(s) of the
+            line entry with opposite debit/credit.'
+          items:
+            description: unique id for a ledger
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+        paymentApplications:
+          description: ' Payments applied to an accrual source (bill/invoice) using
+            the Line Entry.'
+          items:
+            $ref: '#/components/schemas/BooksLineEntryPaymentApplication'
+          nullable: true
+          type: array
+        relatedLineEntryId:
+          description: |2-
+             If the Line Entry is identified as a transfer between accounts, the ID
+             of the Line Entry in the opposing Ledger. Related guide:
+             [Auto-categorization](https://docs.teal.dev/guides/platform/categorization/pipeline#transfers-between-accounts)
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        tagIds:
+          description: ' The IDs of the tags associated with the line entry, if any'
+          items:
+            description: unique id for a tag
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+        transactionId:
+          description: ' The ID of the associated Transaction, if one exists.'
+          nullable: true
+          type: string
+      required:
+      - id
+      - amount
+      - debitCredit
+      - ledgerId
+      - datetime
+      - editable
+      - ledgerName
+      - journalEntryId
+      - journalEntryDescription
+      type: object
+    BooksLineEntryPaymentApplication:
+      description: ' Payment application for a line entry'
+      properties:
+        accrualSource:
+          allOf:
+          - $ref: '#/components/schemas/BooksLineEntryPaymentApplicationAccrualSource'
+          - description: ' Metadata for the accrual source for this payment application'
+          nullable: true
+        adjustments:
+          description: ' Applicable adjustments'
+          items:
+            $ref: '#/components/schemas/BooksPaymentApplicationAccrualAdjustment'
+          type: array
+        matchedAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' What amount of the line entry is applied as a payment to
+              the accrual source'
+        paymentApplicationId:
+          description: ' The ID of the payment application'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        sourceType:
+          description: ' The source type of the payment application'
+          enum:
+          - bankTransaction
+          - customerCredit
+          - manual
+          type: string
+        status:
+          description: ' The status of the payment application'
+          enum:
+          - proposed
+          - confirmed
+          - rejected
+          type: string
+      required:
+      - paymentApplicationId
+      - matchedAmount
+      - status
+      - sourceType
+      - adjustments
+      type: object
+    BooksLineEntryPaymentApplicationAccrualSource:
+      description: ' Accrual source metadata for a line entry payment application'
+      properties:
+        accrualSourceId:
+          description: ' The ID of the accrual source'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        effectiveDate:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' The effective date of the accrual source'
+        externalId:
+          description: ' The external ID of the accrual source'
+          nullable: true
+          type: string
+        externalPartyId:
+          allOf:
+          - $ref: '#/components/schemas/BooksExternalPartyId'
+          - description: ' The external party ID of the accrual source'
+          nullable: true
+        grossAmount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' The gross amount of the accrual source'
+        referenceNumber:
+          description: ' The reference number of the accrual source'
+          type: string
+        type:
+          description: ' The type of the accrual source'
+          enum:
+          - invoice
+          - bill
+          - payroll
+          type: string
+      required:
+      - accrualSourceId
+      - type
+      - referenceNumber
+      - effectiveDate
+      - grossAmount
+      type: object
+    BooksPaymentApplicationAccrualAdjustment:
+      description: ' Adjustment for an accrual source'
+      properties:
+        accrualAdjustmentId:
+          description: ' ID of the adjustment'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+          - description: ' Value of the adjustment against the accrual source'
+        creditAccountId:
+          description: ' ID of the applicable credit ledger'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        debitAccountId:
+          description: ' ID of the applicable debit ledger'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      required:
+      - accrualAdjustmentId
+      - amount
+      - debitAccountId
+      - creditAccountId
+      type: object
     CardNetwork:
       enum:
       - visa
@@ -1126,13 +2164,36 @@ components:
       - expired
       - suspended
       type: string
+    CategoriesPaginatedResponse:
+      description: |2-
+         Paginated response containing a list of categories.
+         | Use the page cursor information to fetch additional pages of categories.
+      properties:
+        categories:
+          description: ' List of categories in the current page'
+          items:
+            $ref: '#/components/schemas/CategoryData'
+          type: array
+        page:
+          description: ' Pagination information including cursors for navigating to
+            next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/CategoryId'
+            previousPage:
+              $ref: '#/components/schemas/CategoryId'
+          type: object
+      required:
+      - categories
+      - page
+      type: object
     CategoryData:
       description: ' Represents an expense category for transaction classification.'
       properties:
         id:
           allOf:
           - $ref: '#/components/schemas/CategoryId'
-          description: ' The ID of the category'
+          - description: ' The ID of the category'
         name:
           description: ' The name of the category'
           type: string
@@ -1157,9 +2218,134 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/AddressWithoutName'
-          description: ' Mailing address for sending a physical check.'
+          - description: ' Mailing address for sending a physical check.'
       required:
       - address
+      type: object
+    CreateBooksAPIAgentCoaTemplateResponse:
+      description: ' Response after creating a COA template.'
+      properties:
+        coaTemplate:
+          allOf:
+          - $ref: '#/components/schemas/BooksChartOfAccountsTemplate'
+          - description: ' The created Chart of Accounts template'
+      required:
+      - coaTemplate
+      type: object
+    CreateBooksAPIAgentLedgerTemplateResponse:
+      description: ' Response after creating a ledger template.'
+      properties:
+        ledgerTemplate:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerTemplate'
+          - description: ' The created ledger template'
+      required:
+      - ledgerTemplate
+      type: object
+    CreateBooksAPICoaTemplateRequest:
+      description: ' Request to create a new Chart of Accounts template.'
+      properties:
+        accountingBasis:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccountingBasis'
+          - description: ' The accounting basis for this Chart of Accounts template.'
+        name:
+          description: ' An arbitrary string on the object, useful for identifying
+            the Chart of Accounts template.'
+          type: string
+      required:
+      - name
+      - accountingBasis
+      type: object
+    CreateBooksAPIJournalEntriesBulkResponse:
+      description: ' Response for a bulk journal entry creation request.'
+      properties:
+        journalEntries:
+          description: ' The created journal entries'
+          items:
+            $ref: '#/components/schemas/BooksJournalEntry'
+          type: array
+      required:
+      - journalEntries
+      type: object
+    CreateBooksAPIJournalEntryRequest:
+      description: ' Request to create a single journal entry.'
+      properties:
+        datetime:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' The date and time of the journal entry'
+        description:
+          description: ' Description of the journal entry'
+          format: size < 513
+          type: string
+        lineEntries:
+          description: ' The line entries that compose this journal entry'
+          items:
+            $ref: '#/components/schemas/BooksAPICreateJournalEntryLineEntry'
+          type: array
+      required:
+      - datetime
+      - description
+      - lineEntries
+      type: object
+    CreateBooksAPILedgerTemplateRequest:
+      description: ' Request to create a new ledger template within a COA template.'
+      properties:
+        coaTemplateId:
+          description: ' The COA Template Id.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        debitCredit:
+          allOf:
+          - $ref: '#/components/schemas/BooksDebitCredit'
+          - description: ' Whether the ledger has a debit or credit normal balance'
+        editable:
+          description: ' Whether line entries can be manually added or removed from
+            the ledger.'
+          type: boolean
+        financialAccountType:
+          allOf:
+          - $ref: '#/components/schemas/BooksFinancialAccountType'
+          - description: ' The financial account type for this ledger'
+        ledgerSubType:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerSubType'
+          - description: ' The sub-type of the ledger'
+        ledgerType:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerType'
+          - description: ' The type of ledger (asset, liability, equity, revenue,
+              expense)'
+        name:
+          description: ' The name of the ledger.'
+          type: string
+        parentId:
+          description: ' If the ledger is a child Ledger, the ID of the parent ledger
+            object.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        reportCashFlow:
+          description: ' Whether Teal includes this ledger in the cash flow report.'
+          type: boolean
+        sortCode:
+          description: ' Determines the display order in reports, ordered digit by
+            digit.'
+          format: matches ^[0-9]+$, size < 21
+          type: string
+      required:
+      - coaTemplateId
+      - name
+      - ledgerType
+      - ledgerSubType
+      - debitCredit
+      - sortCode
+      - editable
+      - reportCashFlow
+      - financialAccountType
       type: object
     CreateWebhookParams:
       description: ' Request body for creating a new webhook endpoint'
@@ -1168,10 +2354,7 @@ components:
           description: ' Optional array of event types to subscribe to. Nothing means
             subscribe to all event types.'
           items:
-            enum:
-            - transaction.created
-            - transaction.updated
-            type: string
+            $ref: '#/components/schemas/WebhookEventType'
           nullable: true
           type: array
         filterPaths:
@@ -1179,22 +2362,7 @@ components:
             When specified, webhook events will only be sent when one of these fields
             changes. Nothing means no filtering (all events are sent).'
           items:
-            enum:
-            - transaction.amount
-            - transaction.bankDescription
-            - transaction.categoryData
-            - transaction.customCategory
-            - transaction.customCategory.id
-            - transaction.customCategory.name
-            - transaction.mercuryCategory
-            - transaction.estimatedDeliveryDate
-            - transaction.externalMemo
-            - transaction.failedAt
-            - transaction.note
-            - transaction.postedAt
-            - transaction.reasonForFailure
-            - transaction.status
-            type: string
+            $ref: '#/components/schemas/ResourceField'
           nullable: true
           type: array
         url:
@@ -1226,37 +2394,6 @@ components:
       - createdAt
       - availableBalance
       - currentBalance
-      type: object
-    CreditAccountStatementPayload:
-      properties:
-        creditLimit:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-        creditPeriodId:
-          allOf:
-          - $ref: '#/components/schemas/MercuryCreditAccountStatementPeriodId'
-        dueDate:
-          type: string
-        totalAutopayPayments:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-        totalCashbackEarned:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-        totalOneTimePayments:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-        totalTransactions:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-      required:
-      - creditLimit
-      - totalTransactions
-      - totalOneTimePayments
-      - totalAutopayPayments
-      - totalCashbackEarned
-      - dueDate
-      - creditPeriodId
       type: object
     CreditAccountsResponse:
       properties:
@@ -1326,7 +2463,9 @@ components:
       - exchangeRate
       type: object
     CustomerId:
-      description: ID for the customer
+      description: The customer who will receive the invoice. Use the /api/v1/ar/customers
+        endpoint to list your customers and find the corresponding id, or create a
+        new customer first.
       format: uuid
       type: string
     Day:
@@ -1344,15 +2483,81 @@ components:
       required:
       - id
       type: object
-    DepositoryAccountStatementPayload:
+    DeleteBooksAPIJournalEntriesRequest:
+      description: ' Request to delete journal entries.'
+      properties:
+        journalEntryIds:
+          description: ' A list of journal entry ids to delete'
+          items:
+            description: unique id for a journal entry
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          type: array
+      required:
+      - journalEntryIds
+      type: object
+    DepositoryAccountStatement:
       properties:
         accountNumber:
           type: string
+        companyLegalAddress:
+          allOf:
+          - $ref: '#/components/schemas/Address'
+        companyLegalName:
+          type: string
+        downloadUrl:
+          type: string
+        ein:
+          nullable: true
+          type: string
+        endDate:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+        endingBalance:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+        id:
+          allOf:
+          - $ref: '#/components/schemas/AccountStatementId'
         routingNumber:
           type: string
+        startDate:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+        transactions:
+          items:
+            $ref: '#/components/schemas/AccountStatementTransaction'
+          type: array
       required:
+      - startDate
+      - endDate
       - accountNumber
       - routingNumber
+      - companyLegalName
+      - companyLegalAddress
+      - endingBalance
+      - downloadUrl
+      - id
+      - transactions
+      type: object
+    DepositoryAccountStatementsPaginatedResponse:
+      description: ' Paginated response for depository account statements (v1 API)'
+      properties:
+        page:
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/AccountStatementId'
+            previousPage:
+              $ref: '#/components/schemas/AccountStatementId'
+          type: object
+        statements:
+          items:
+            $ref: '#/components/schemas/DepositoryAccountStatement'
+          type: array
+      required:
+      - statements
+      - page
       type: object
     Dollar:
       description: A dollar amount
@@ -1384,8 +2589,8 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/AddressWithoutName'
-          description: ' The address of the bank account to use for domestic wire
-            payments. This has to be the recipient''s legal address.'
+          - description: ' The address of the bank account to use for domestic wire
+              payments. This has to be the recipient''s legal address.'
         defaultForBenefitOf:
           description: ' The name of the beneficiary of the domestic wire. This is
             the name of the entity that will receive the domestic wire.'
@@ -1467,12 +2672,12 @@ components:
         address:
           allOf:
           - $ref: '#/components/schemas/AddressWithoutName'
-          description: ' The address of the bank account to use for ACH payments.
-            This has to be the recipient''s legal address.'
+          - description: ' The address of the bank account to use for ACH payments.
+              This has to be the recipient''s legal address.'
         electronicAccountType:
           allOf:
           - $ref: '#/components/schemas/ElectronicAccountType'
-          description: ' The type of bank account to use for ACH payments.'
+          - description: ' The type of bank account to use for ACH payments.'
         routingNumber:
           description: ' The routing number of the bank account to use for ACH payments.'
           type: string
@@ -1484,12 +2689,76 @@ components:
       type: object
     Email:
       type: string
+    GetBooksAPIAgentCoaTemplateResponse:
+      description: ' Response containing a single agent COA template.'
+      properties:
+        coaTemplate:
+          allOf:
+          - $ref: '#/components/schemas/BooksChartOfAccountsTemplate'
+          - description: ' The requested Chart of Accounts template'
+      required:
+      - coaTemplate
+      type: object
+    GetBooksAPIAgentCoaTemplatesResponse:
+      description: ' Response containing a list of agent COA templates.'
+      properties:
+        agentTemplates:
+          description: ' Agent-created COA templates'
+          items:
+            $ref: '#/components/schemas/BooksChartOfAccountsTemplate'
+          type: array
+        defaultTemplates:
+          description: ' Platform default COA templates available to this agent'
+          items:
+            $ref: '#/components/schemas/BooksChartOfAccountsTemplate'
+          type: array
+        nextPageToken:
+          description: ' Token for fetching the next page of results'
+          nullable: true
+          type: string
+        prevPageToken:
+          description: ' Token for fetching the previous page of results'
+          nullable: true
+          type: string
+      required:
+      - agentTemplates
+      - defaultTemplates
+      type: object
+    GetBooksAPIJournalEntriesResponse:
+      description: ' Response containing a paginated list of journal entries.'
+      properties:
+        journalEntries:
+          description: ' The journal entries matching the query'
+          items:
+            $ref: '#/components/schemas/BooksJournalEntry'
+          type: array
+        nextPageToken:
+          description: ' Token to fetch the next page of results'
+          nullable: true
+          type: string
+        prevPageToken:
+          description: ' Token to fetch the previous page of results'
+          nullable: true
+          type: string
+      required:
+      - journalEntries
+      type: object
+    GetBooksAPIJournalEntryResponse:
+      description: ' Response containing a single journal entry.'
+      properties:
+        journalEntry:
+          allOf:
+          - $ref: '#/components/schemas/BooksJournalEntry'
+          - description: ' The requested journal entry'
+      required:
+      - journalEntry
+      type: object
     ISO3166Alpha2:
       type: string
     InternalTransferAPIRequest:
       description: |2-
          Request body for POST /api/v1/transfer endpoint.
-         Transfers funds between two accounts belonging to the same organization.
+         Transfers funds between two depository, treasury, or investment accounts belonging to the same organization.
       properties:
         amount:
           allOf:
@@ -1514,7 +2783,7 @@ components:
     InternalTransferAPIResponse:
       description: |2-
          Response for POST /api/v1/transfer endpoint.
-         Returns both the credit and debit transactions for the transfer.
+         Returns both the credit and debit transactions for the transfer (depository, treasury, or investment).
       properties:
         creditTransaction:
           allOf:
@@ -1743,7 +3012,7 @@ components:
       - branchCode
       type: object
     InvoiceId:
-      description: ID for the invoice
+      description: ID for the invoice.
       format: uuid
       type: string
     MerchantData:
@@ -1752,7 +3021,8 @@ components:
         category:
           allOf:
           - $ref: '#/components/schemas/MercuryCategory'
-          description: ' Mercury category for the merchant (e.g., "Restaurants", "Software")'
+          - description: ' Mercury category for the merchant (e.g., "Restaurants",
+              "Software")'
           nullable: true
         categoryCode:
           description: ' 4-digit merchant category code (MCC) for card transactions'
@@ -1810,7 +3080,7 @@ components:
       format: uuid
       type: string
     NonNegativeDollar:
-      description: A positive dollar amount with at least 1 cent
+      description: A positive dollar amount with at least 1 cent.
       format: double
       minimum: 1.0e-2
       type: number
@@ -1847,11 +3117,11 @@ components:
         id:
           allOf:
           - $ref: '#/components/schemas/UUID'
-          description: ' Unique identifier for the organization'
+          - description: ' Unique identifier for the organization'
         kind:
           allOf:
           - $ref: '#/components/schemas/ApiOrganizationKind'
-          description: ' Whether this is a personal or business organization'
+          - description: ' Whether this is a personal or business organization'
         legalBusinessName:
           description: ' Legal business name as registered'
           type: string
@@ -1867,20 +3137,13 @@ components:
         organization:
           allOf:
           - $ref: '#/components/schemas/OrganizationInfo'
-          description: ' Organization information'
+          - description: ' Organization information'
       required:
       - organization
       type: object
     PDFDocument:
       format: binary
       type: string
-    Page:
-      properties:
-        nextPage:
-          $ref: '#/components/schemas/UserId'
-        previousPage:
-          $ref: '#/components/schemas/UserId'
-      type: object
     PageTotal:
       format: int32
       maximum: 1000
@@ -1915,7 +3178,7 @@ components:
       - paused
       type: string
     PositiveDollar:
-      description: A positive dollar amount with at least 1 cent
+      description: A positive dollar amount with at least 1 cent.
       format: double
       minimum: 1.0e-2
       type: number
@@ -1937,7 +3200,12 @@ components:
         paymentMethod:
           allOf:
           - $ref: '#/components/schemas/PostTransactionPaymentMethod'
-          description: Payment method to use, currently only supports "ach".
+          description: If domesticWire is used, then the purpose field is required.
+        purpose:
+          allOf:
+          - $ref: '#/components/schemas/PostTransactionSendMoneyPurpose'
+          description: Purpose of payment with category and optional additional info.
+            Required when paymentMethod is 'domesticWire'.
         recipientId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
@@ -1951,7 +3219,19 @@ components:
     PostTransactionPaymentMethod:
       enum:
       - ach
+      - check
+      - domesticWire
       type: string
+    PostTransactionSendMoneyPurpose:
+      description: |2-
+         External API representation of SendMoneyPurpose.
+         Only exposes the 'simple' field to decouple internal implementation from external API.
+      properties:
+        simple:
+          allOf:
+          - $ref: '#/components/schemas/SimplePurpose'
+          nullable: true
+      type: object
     RealTimePaymentRoutingInfo:
       properties:
         accountNumber:
@@ -1977,13 +3257,13 @@ components:
         formType:
           allOf:
           - $ref: '#/components/schemas/TaxFormType'
-          description: ' The tax form type (W-9 for US persons, W-8BEN for foreign
-            individuals, W-8BEN-E for foreign entities)'
+          - description: ' The tax form type (W-9 for US persons, W-8BEN for foreign
+              individuals, W-8BEN-E for foreign entities)'
           nullable: true
         uploadedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' Timestamp when the attachment was uploaded'
+          - description: ' Timestamp when the attachment was uploaded'
         url:
           description: ' Presigned URL to download the attachment (valid for 12 hours)'
           type: string
@@ -2000,21 +3280,26 @@ components:
         formType:
           allOf:
           - $ref: '#/components/schemas/TaxFormType'
-          description: ' The tax form type (W-9, W-8BEN, W-8BEN-E, or Unknown)'
+          - description: ' The tax form type (W-9, W-8BEN, W-8BEN-E, or Unknown)'
           nullable: true
+        id:
+          allOf:
+          - $ref: '#/components/schemas/RecipientTaxFormAttachmentId'
+          - description: ' The unique identifier for this attachment'
         recipientId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
-          description: ' The external ID of the recipient this attachment belongs
-            to'
+          - description: ' The external ID of the recipient this attachment belongs
+              to'
         uploadedAt:
           allOf:
           - $ref: '#/components/schemas/UTCTime'
-          description: ' Timestamp when the attachment was uploaded'
+          - description: ' Timestamp when the attachment was uploaded'
         url:
           description: ' Presigned URL to download the attachment (valid for 12 hours)'
           type: string
       required:
+      - id
       - recipientId
       - fileName
       - url
@@ -2112,13 +3397,17 @@ components:
             $ref: '#/components/schemas/RecipientAttachmentWithId'
           type: array
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
           description: ' Pagination information'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/RecipientTaxFormAttachmentId'
+            previousPage:
+              $ref: '#/components/schemas/RecipientTaxFormAttachmentId'
+          type: object
         total:
           allOf:
           - $ref: '#/components/schemas/PageTotal'
-          description: ' Total number of attachments in the current page'
+          - description: ' Total number of attachments in the current page'
       required:
       - total
       - attachments
@@ -2127,10 +3416,14 @@ components:
     RecipientsPaginatedResponse:
       properties:
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
           description: ' Pagination information including cursors for navigating to
             next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/RecipientId'
+            previousPage:
+              $ref: '#/components/schemas/RecipientId'
+          type: object
         recipients:
           description: ' List of recipients in the current page'
           items:
@@ -2139,7 +3432,7 @@ components:
         total:
           allOf:
           - $ref: '#/components/schemas/PageTotal'
-          description: ' Total number of recipients in the current page'
+          - description: ' Total number of recipients in the current page'
       required:
       - total
       - recipients
@@ -2175,6 +3468,38 @@ components:
       - domesticWire
       - internationalWire
       type: string
+    ResourceField:
+      enum:
+      - transaction.amount
+      - transaction.bankDescription
+      - transaction.categoryData
+      - transaction.customCategory
+      - transaction.customCategory.id
+      - transaction.customCategory.name
+      - transaction.mercuryCategory
+      - transaction.estimatedDeliveryDate
+      - transaction.externalMemo
+      - transaction.failedAt
+      - transaction.note
+      - transaction.postedAt
+      - transaction.reasonForFailure
+      - transaction.status
+      - checkingAccount.availableBalance
+      - checkingAccount.currentBalance
+      - checkingAccount.inFlightBalance
+      - savingsAccount.availableBalance
+      - savingsAccount.currentBalance
+      - savingsAccount.inFlightBalance
+      - treasuryAccount.availableBalance
+      - treasuryAccount.currentBalance
+      - treasuryAccount.inFlightBalance
+      - investmentAccount.availableBalance
+      - investmentAccount.currentBalance
+      - investmentAccount.inFlightBalance
+      - creditAccount.availableBalance
+      - creditAccount.currentBalance
+      - creditAccount.inFlightBalance
+      type: string
     ResourceVersion:
       format: int64
       minimum: 1
@@ -2185,6 +3510,16 @@ components:
       - approved
       - rejected
       - cancelled
+      type: string
+    SafeRequestId:
+      description: ID for the SAFE request
+      format: uuid
+      type: string
+    SafeRequestInvestorType:
+      enum:
+      - SafeRequestInvestorTypeIndividual
+      - SafeRequestInvestorTypeVentureFund
+      - SafeRequestInvestorTypeOther
       type: string
     SecurityIdType:
       enum:
@@ -2251,6 +3586,33 @@ components:
       - amount
       - status
       type: object
+    SimplePurpose:
+      properties:
+        additionalInfo:
+          description: 'Additional information. Required for: Vendor (vendor name),
+            Contractor (contractor name), Other (payment description). Optional for
+            Subsidiary (subsidiary name). Not accepted for any other categories.'
+          type: string
+        category:
+          description: Payment category.
+          enum:
+          - Employee
+          - Landlord
+          - Vendor
+          - Contractor
+          - Subsidiary
+          - TransferToMyExternalAccount
+          - FamilyMemberOrFriend
+          - ForGoodsOrServices
+          - AngelInvestment
+          - SavingsOrInvestments
+          - Expenses
+          - Travel
+          - Other
+          type: string
+      required:
+      - category
+      type: object
     SliceSequenceNumber:
       description: Pagination cursor for retrieving next batch of transactions
       minimum: 0
@@ -2281,386 +3643,13 @@ components:
       - w8BENE
       - unknown
       type: string
-    TealCreateJournalEntryLineEntry:
-      properties:
-        amount:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-          description: ' The value of the line entry in decimal dollar cents.'
-        debit_credit:
-          description: ' Indicates if the amount is a credit or debit.'
-          enum:
-          - debit
-          - credit
-          type: string
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user or for categorization.'
-          type: string
-        ledger_id:
-          description: ' The ID of the Line Entry''s Ledger. Can be null in some cases
-            for Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        tag_ids:
-          description: ' A list of IDs of the Tag objects associated with the Line
-            Entry.'
-          items:
-            description: The unique identifier for a Tag
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-      required:
-      - amount
-      - debit_credit
-      - description
-      - ledger_id
-      type: object
-    TealCreateJournalEntryParams:
-      properties:
-        datetime:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-          description: ' The datetime the Journal Entry was created in UTC time.'
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user.'
-          type: string
-        line_entries:
-          description: |2-
-             The Line Entry objects to be associated with the Journal Entry. Must
-             include at least two Line Entries, one debit and one credit, and the sum
-             of the `amount`s of all debit entries must equal the sum of the
-             `amount`s of the credit entries.
-          items:
-            $ref: '#/components/schemas/TealCreateJournalEntryLineEntry'
-          type: array
-      required:
-      - datetime
-      - description
-      - line_entries
-      type: object
-    TealDeleteJournalEntriesParams:
-      properties:
-        journal_entry_ids:
-          description: ' The journal entries to delete'
-          items:
-            description: The unique identifier for a Journal Entry
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          type: array
-      required:
-      - journal_entry_ids
-      type: object
-    TealJournalEntry:
-      properties:
-        creation_date:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-          description: ' The timestamp when this journal entry record was created
-            in the database.'
-        creation_source:
-          description: ' The source of the journal entry creation: ''manual'' if created
-            manually by the user, ''transaction'' if auto-generated from transaction
-            categorization (e.g., Plaid sync), or ''legacy'' if auto-generated from
-            the old AR/AP system.'
-          enum:
-          - manual
-          - transaction
-          - accrual
-          - legacy
-          type: string
-        datetime:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-          description: ' The datetime the Journal Entry was created in UTC time'
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user.'
-          type: string
-        id:
-          description: ' The unique ID of the object.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        is_opening_balance:
-          description: ' Whether the Journal Entry represents an opening balance.'
-          type: boolean
-        line_entries:
-          description: ' List of Line Entries. Included in expanded responses.'
-          items:
-            $ref: '#/components/schemas/TealLineEntry'
-          nullable: true
-          type: array
-        line_entry_ids:
-          description: ' The ids of the Line Entries detailing the Journal Entry''s
-            movement of value. Only `null` if the Instance is using QuickBooks as
-            their accounting package.'
-          items:
-            description: The unique identifier for a Line Entry
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-      required:
-      - id
-      - description
-      - datetime
-      - creation_date
-      - is_opening_balance
-      - creation_source
-      type: object
-    TealLineEntry:
-      properties:
-        amount:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-          description: ' The value of the line entry in decimal dollar cents.'
-        datetime:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-          description: ' The datetime the Line Entry was created in UTC time.'
-        debit_credit:
-          description: ' Indicates if the amount is a credit or debit.'
-          enum:
-          - debit
-          - credit
-          type: string
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user or for categorization.'
-          nullable: true
-          type: string
-        editable:
-          description: ' Indicates if the Line Entry can be manually added or removed
-            from a Ledger, as dictated by the `editable` property on the Ledger.'
-          type: boolean
-        id:
-          description: ' The unique ID of the object. Can be null in some cases for
-            Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        journal_entry_description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user.'
-          type: string
-        journal_entry_id:
-          description: ' The ID of the associated Journal Entry. Can be null in some
-            cases for Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        ledger_id:
-          description: ' The ID of the Line Entry''s Ledger. Can be null in some cases
-            for Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        ledger_name:
-          description: ' The name of the Line Entry''s Ledger.'
-          type: string
-        opposing_ledger_ids:
-          description: ' Expandable. IDs of the ledgers on the other side(s) of the
-            line entry with opposite debit/credit.'
-          items:
-            description: The unique identifier for a Ledger
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-        related_line_entry_id:
-          description: |2-
-             If the Line Entry is identified as a transfer between accounts, the ID
-             of the Line Entry in the opposing Ledger. Related guide:
-             [Auto-categorization](https://docs.teal.dev/guides/platform/categorization/pipeline#transfers-between-accounts)
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          nullable: true
-          type: string
-        transaction_id:
-          description: ' The ID of the associated Transaction, if one exists.'
-          nullable: true
-          type: string
-      required:
-      - id
-      - amount
-      - debit_credit
-      - ledger_id
-      - datetime
-      - editable
-      - ledger_name
-      - journal_entry_id
-      - journal_entry_description
-      type: object
-    TealPaginationResponse:
-      properties:
-        next_page_token:
-          description: The token to use to request the next page
-          example: ikal0NEVfMhF8dJf4yQ6KQZmGD
-          nullable: true
-          type: string
-        prev_page_token:
-          description: The token to use to request the previous page
-          example: vuA7JeKI5c6FLnPt5JfRcZcJxW
-          nullable: true
-          type: string
-        records:
-          items:
-            $ref: '#/components/schemas/TealJournalEntry'
-          type: array
-      type: object
-    TealUpdateJournalEntriesItem:
-      properties:
-        datetime:
-          allOf:
-          - $ref: '#/components/schemas/UTCTime'
-          description: ' The datetime the Journal Entry was created in UTC time.'
-          nullable: true
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user.'
-          nullable: true
-          type: string
-        id:
-          description: ' The unique ID of the object.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        line_entry_changes:
-          allOf:
-          - $ref: '#/components/schemas/TealUpdateJournalEntryChanges'
-          description: |2-
-             An object with optional `create`, `update`, and `delete` parameters to
-             modify the Line Entries associated with the Journal Entry. The `create`
-             and `update` parameters accept lists of Line Entry objects, while the
-             `delete` parameter accepts a list of existing Line Entry IDs.
-          nullable: true
-      required:
-      - id
-      type: object
-    TealUpdateJournalEntryChanges:
-      properties:
-        create:
-          description: ' A list of new Line Entry objects to be created on the Journal
-            Entry.'
-          items:
-            $ref: '#/components/schemas/TealUpdateJournalEntryLECreate'
-          nullable: true
-          type: array
-        delete:
-          description: ' A list of existing Line Entry IDs to delete.'
-          items:
-            description: The unique identifier for a Line Entry
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-        update:
-          description: ' A list of existing Line Entry objects to be updated on the
-            Journal Entry.'
-          items:
-            $ref: '#/components/schemas/TealUpdateJournalEntryLEUpdate'
-          nullable: true
-          type: array
-      type: object
-    TealUpdateJournalEntryLECreate:
-      properties:
-        amount:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-          description: ' The value of the line entry in decimal dollar cents.'
-        debit_credit:
-          description: ' Indicates if the amount is a credit or debit.'
-          enum:
-          - debit
-          - credit
-          type: string
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user or for categorization.'
-          type: string
-        ledger_id:
-          description: ' The ID of the Line Entry''s Ledger. Can be null in some cases
-            for Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        tag_ids:
-          description: ' A list of IDs of the Tag objects associated with the Line
-            Entry.'
-          items:
-            description: The unique identifier for a Tag
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-      required:
-      - amount
-      - debit_credit
-      - description
-      - ledger_id
-      type: object
-    TealUpdateJournalEntryLEUpdate:
-      properties:
-        amount:
-          allOf:
-          - $ref: '#/components/schemas/Dollar'
-          description: ' The value of the line entry in decimal dollar cents.'
-          nullable: true
-        debit_credit:
-          description: ' Indicates if the amount is a credit or debit.'
-          enum:
-          - debit
-          - credit
-          nullable: true
-          type: string
-        description:
-          description: ' An arbitrary string on the object, useful for displaying
-            to the user or for categorization.'
-          nullable: true
-          type: string
-        id:
-          description: ' The unique ID of the object. Can be null in some cases for
-            Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        ledger_id:
-          description: ' The ID of the Line Entry''s Ledger. Can be null in some cases
-            for Instances using QuickBooks as their accounting package.'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          nullable: true
-          type: string
-        tag_ids:
-          description: ' A list of IDs of the Tag objects associated with the Line
-            Entry.'
-          items:
-            description: The unique identifier for a Tag
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
-          nullable: true
-          type: array
-      required:
-      - id
-      type: object
     Transaction:
       properties:
         accountId:
           allOf:
           - $ref: '#/components/schemas/TransactionPartyId'
-          description: ' The external-facing account identifier for the Mercury account
-            that owns this transaction'
+          - description: ' The external-facing account identifier for the Mercury
+              account that owns this transaction'
         amount:
           multipleOf: 1.0e-2
           type: number
@@ -2740,8 +3729,8 @@ components:
         merchant:
           allOf:
           - $ref: '#/components/schemas/MerchantData'
-          description: ' Merchant information for card transactions; Nothing for non-card
-            transactions'
+          - description: ' Merchant information for card transactions; Nothing for
+              non-card transactions'
           nullable: true
         mercuryCategory:
           allOf:
@@ -2865,7 +3854,7 @@ components:
           nullable: true
       type: object
     TransactionPartyId:
-      description: ID for the Mercury account
+      description: ID for a Mercury account.
       format: uuid
       type: string
     TransactionRelationKind:
@@ -2909,8 +3898,12 @@ components:
     TransactionsPaginatedResponse:
       properties:
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/UUID'
+            previousPage:
+              $ref: '#/components/schemas/UUID'
+          type: object
         transactions:
           items:
             $ref: '#/components/schemas/Transaction'
@@ -2963,16 +3956,26 @@ components:
       - currentBalance
       - netReturns
       type: object
-    TreasuryAccountsResponse:
-      description: ' Response type for treasury accounts API endpoint'
+    TreasuryAccountsPaginatedResponse:
+      description: ' Paginated response type for treasury accounts API endpoint'
       properties:
         accounts:
-          description: ' List of treasury accounts in the response'
+          description: ' List of treasury accounts in the current page'
           items:
             $ref: '#/components/schemas/TreasuryAccount'
           type: array
+        page:
+          description: ' Pagination information including cursors for navigating to
+            next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/TransactionPartyId'
+            previousPage:
+              $ref: '#/components/schemas/TransactionPartyId'
+          type: object
       required:
       - accounts
+      - page
       type: object
     TreasuryDividend:
       description: ' Dividend information for a specific treasury security'
@@ -2991,7 +3994,7 @@ components:
         type:
           allOf:
           - $ref: '#/components/schemas/SecurityIdType'
-          description: ' Security identifier type'
+          - description: ' Security identifier type'
       required:
       - id
       - type
@@ -3013,7 +4016,7 @@ components:
         month:
           allOf:
           - $ref: '#/components/schemas/Day'
-          description: ' First day of the month for this net return'
+          - description: ' First day of the month for this net return'
         netAmount:
           description: ' Net return amount (dividends minus fees)'
           multipleOf: 1.0e-2
@@ -3021,7 +4024,7 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/TreasuryNetReturnStatus'
-          description: ' Status of this net return calculation'
+          - description: ' Status of this net return calculation'
         treasuryFee:
           description: ' Treasury fee charged for this period (positive value)'
           multipleOf: 1.0e-2
@@ -3040,6 +4043,91 @@ components:
       - charged
       - error
       type: string
+    TreasuryStatement:
+      description: ' Individual treasury statement in the response'
+      properties:
+        accountId:
+          allOf:
+          - $ref: '#/components/schemas/TransactionPartyId'
+          - description: ' External treasury account ID this statement belongs to'
+        createdAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Timestamp when the record was created'
+        creationDate:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Date the statement was created by the custodian'
+        description:
+          description: ' Human-readable description of the statement'
+          type: string
+        documentType:
+          allOf:
+          - $ref: '#/components/schemas/TreasuryStatementDocumentType'
+          - description: ' Type of document (e.g. monthly statement, trade confirmation,
+              tax form)'
+        downloadUrl:
+          description: ' URL to download the statement PDF'
+          type: string
+        id:
+          allOf:
+          - $ref: '#/components/schemas/AccountStatementId'
+          - description: ' Unique identifier for the statement'
+        periodEnd:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' End of the period covered by the statement'
+        periodStart:
+          allOf:
+          - $ref: '#/components/schemas/Day'
+          - description: ' Start of the period covered by the statement'
+        updatedAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Timestamp when the record was last updated'
+      required:
+      - id
+      - documentType
+      - description
+      - accountId
+      - creationDate
+      - periodStart
+      - periodEnd
+      - downloadUrl
+      - createdAt
+      - updatedAt
+      type: object
+    TreasuryStatementDocumentType:
+      enum:
+      - MonthlyStatement
+      - TradeConfirmation
+      - '1099'
+      - 1099R
+      - 1042S
+      - '5498'
+      - 5498ESA
+      - 1099Q
+      - FMV
+      - SDIRA
+      type: string
+    TreasuryStatementsPaginatedResponse:
+      description: ' Paginated response for treasury account statements'
+      properties:
+        page:
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/AccountStatementId'
+            previousPage:
+              $ref: '#/components/schemas/AccountStatementId'
+          type: object
+        statements:
+          items:
+            $ref: '#/components/schemas/TreasuryStatement'
+          type: array
+      required:
+      - statements
+      - page
+      type: object
     TreasuryTransactionDetails:
       properties:
         creditDescription:
@@ -3105,7 +4193,7 @@ components:
         cursor:
           allOf:
           - $ref: '#/components/schemas/SliceSequenceNumber'
-          description: ' Pagination cursor for retrieving next batch of transactions'
+          - description: ' Pagination cursor for retrieving next batch of transactions'
           nullable: true
         transactions:
           description: ' List of treasury transactions in the response'
@@ -3219,6 +4307,67 @@ components:
       example: 00000000-0000-0000-0000-000000000000
       format: uuid
       type: string
+    UpdateBooksAPIAgentLedgerTemplateResponse:
+      description: ' Response after updating a ledger template.'
+      properties:
+        ledgerTemplate:
+          allOf:
+          - $ref: '#/components/schemas/BooksLedgerTemplate'
+          - description: ' The updated ledger template'
+      required:
+      - ledgerTemplate
+      type: object
+    UpdateBooksAPIJournalEntriesRequest:
+      description: ' Request to update multiple journal entries in a single call.'
+      properties:
+        updates:
+          description: ' The individual journal entry updates'
+          items:
+            $ref: '#/components/schemas/UpdateBooksAPIJournalEntryRequest'
+          type: array
+      required:
+      - updates
+      type: object
+    UpdateBooksAPIJournalEntryRequest:
+      description: ' Request to update a single journal entry.'
+      properties:
+        datetime:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Updated date and time'
+          nullable: true
+        description:
+          description: ' Updated description'
+          format: size < 513
+          nullable: true
+          type: string
+        journalEntryId:
+          description: ' The ID of the journal entry to update'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        lineEntryChanges:
+          allOf:
+          - $ref: '#/components/schemas/BooksAPIUpdateJournalEntryChanges'
+          - description: ' Changes to apply to line entries'
+          nullable: true
+      required:
+      - journalEntryId
+      type: object
+    UpdateBooksAPILedgerTemplateRequest:
+      description: ' Request to update an existing ledger template.'
+      properties:
+        name:
+          description: ' The name of the ledger.'
+          nullable: true
+          type: string
+        sortCode:
+          description: ' Determines the display order in reports, ordered digit by
+            digit.'
+          format: matches ^[0-9]+$, size < 21
+          nullable: true
+          type: string
+      type: object
     UpdateWebhookParams:
       description: |2-
          Request body for updating an existing webhook endpoint.
@@ -3229,10 +4378,7 @@ components:
             event types. Send an array to subscribe to specific types. Omit to leave
             unchanged.'
           items:
-            enum:
-            - transaction.created
-            - transaction.updated
-            type: string
+            $ref: '#/components/schemas/WebhookEventType'
           nullable: true
           type: array
         filterPaths:
@@ -3241,29 +4387,14 @@ components:
             null for no filtering. Send an array to filter by specific fields. Omit
             to leave unchanged.'
           items:
-            enum:
-            - transaction.amount
-            - transaction.bankDescription
-            - transaction.categoryData
-            - transaction.customCategory
-            - transaction.customCategory.id
-            - transaction.customCategory.name
-            - transaction.mercuryCategory
-            - transaction.estimatedDeliveryDate
-            - transaction.externalMemo
-            - transaction.failedAt
-            - transaction.note
-            - transaction.postedAt
-            - transaction.reasonForFailure
-            - transaction.status
-            type: string
+            $ref: '#/components/schemas/ResourceField'
           nullable: true
           type: array
         status:
           allOf:
           - $ref: '#/components/schemas/WebhookUpdateStatus'
-          description: ' Webhook status. Only ''active'' and ''paused'' values are
-            allowed. Omit to leave unchanged.'
+          - description: ' Webhook status. Only ''active'' and ''paused'' values are
+              allowed. Omit to leave unchanged.'
           nullable: true
         url:
           description: ' The URL to which webhook events will be delivered. Omit to
@@ -3286,11 +4417,11 @@ components:
         organizationRole:
           allOf:
           - $ref: '#/components/schemas/ApiUserRole'
-          description: ' User''s role within the organization'
+          - description: ' User''s role within the organization'
         userId:
           allOf:
           - $ref: '#/components/schemas/UserId'
-          description: ' Unique identifier for the user'
+          - description: ' Unique identifier for the user'
       required:
       - userId
       - firstName
@@ -3306,10 +4437,14 @@ components:
       description: ' Paginated response containing a list of organization users.'
       properties:
         page:
-          allOf:
-          - $ref: '#/components/schemas/Page'
           description: ' Pagination information including cursors for navigating to
             next/previous pages'
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/UserId'
+            previousPage:
+              $ref: '#/components/schemas/UserId'
+          type: object
         users:
           description: ' List of users in the current page'
           items:
@@ -3319,20 +4454,31 @@ components:
       - users
       - page
       type: object
+    ValuationType:
+      enum:
+      - PreMoney
+      - PostMoney
+      - NoValuation
+      type: string
     VerifyWebhookParams:
       description: ' Request body for verifying a webhook endpoint'
       properties:
         eventType:
           allOf:
           - $ref: '#/components/schemas/WebhookEventType'
-          description: ' Optional event type to test. If not specified, defaults to
-            transaction.created.'
+          - description: ' Optional event type to test. If not specified, defaults
+              to transaction.created.'
           nullable: true
       type: object
     WebhookEventType:
       enum:
       - transaction.created
       - transaction.updated
+      - checkingAccount.balance.updated
+      - savingsAccount.balance.updated
+      - treasuryAccount.balance.updated
+      - investmentAccount.balance.updated
+      - creditAccount.balance.updated
       type: string
     WebhookUpdateStatus:
       enum:
@@ -3380,19 +4526,19 @@ paths:
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
         '404':
           description: '`accountId` not found'
-      summary: Get account by id
+      summary: Get account by ID
       tags:
       - Accounts
   /account/{accountId}/cards:
@@ -3405,13 +4551,13 @@ paths:
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/AccountCardsResponse'
           description: ''
@@ -3422,26 +4568,26 @@ paths:
       - Accounts
   /account/{accountId}/request-send-money:
     post:
-      description: Create a payment request that may require approval based on your
-        organization's payment policies.
+      description: Create a "request to send money" that will require approval based
+        on your organization's approval policies.
       operationId: requestSendMoney
       parameters:
       - in: path
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/SendMoneyAPIRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/SendMoneyApprovalRequestResponse'
           description: ''
@@ -3454,36 +4600,85 @@ paths:
       - Accounts
   /account/{accountId}/statements:
     get:
-      description: Retrieve monthly statements for a specific account. Supports date
-        range filtering.
+      description: Retrieve a paginated list of monthly statements for a specific
+        account. Supports cursor-based pagination with limit, order, start_after,
+        and end_before query parameters, as well as date range filtering with start
+        and end parameters.
       operationId: getAccountStatements
       parameters:
       - in: path
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
+          format: uuid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: desc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'desc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the statement to start the page after (exclusive).
+            When provided, results will begin with the statement immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the statement to end the page before (exclusive).
+            When provided, results will end just before this ID and work backwards.
+            Use this for reverse pagination or to retrieve previous pages. Cannot
+            be combined with start_after.
           format: uuid
           type: string
       - in: query
         name: start
         required: false
         schema:
+          description: 'Filter statements where the period start date is on or after
+            this date. Format: YYYY-MM-DD'
           type: string
       - in: query
         name: end
         required: false
         schema:
+          description: 'Filter statements where the period start date is on or before
+            this date. If the date is in the future, defaults to the current date.
+            Format: YYYY-MM-DD'
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                $ref: '#/components/schemas/AccountStatementsResponse'
+                $ref: '#/components/schemas/DepositoryAccountStatementsPaginatedResponse'
           description: ''
         '400':
-          description: Invalid `end` or `start`
+          description: Invalid `end` or `start` or `end_before` or `start_after` or
+            `order` or `limit`
         '404':
           description: '`accountId` not found'
       summary: Get account statements
@@ -3497,7 +4692,7 @@ paths:
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       - in: path
@@ -3510,13 +4705,13 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
           description: ''
         '404':
           description: '`accountId` or `transactionId` not found'
-      summary: Get transaction by id
+      summary: Get transaction by ID
       tags:
       - Accounts
   /account/{accountId}/transactions:
@@ -3529,18 +4724,18 @@ paths:
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       - in: query
         name: limit
         required: false
         schema:
-          default: 500
-          description: 'Maximum number of results to return. Allowed range: 1 to 500.
-            Defaults to 500'
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
           format: int64
-          maximum: 500
+          maximum: 1000
           minimum: 1
           type: integer
       - in: query
@@ -3598,7 +4793,7 @@ paths:
         name: requestId
         required: false
         schema:
-          description: Id returned from /account/:id/request-send-money
+          description: ID returned from /account/:id/request-send-money
           format: uuid
           type: string
       - in: query
@@ -3619,7 +4814,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/TransactionsResponse'
           description: ''
@@ -3632,26 +4827,26 @@ paths:
       tags:
       - Accounts
     post:
-      description: Send money from this account. Creates a transaction that will be
-        processed immediately or may require approval.
+      description: Send money from an account to a recipient. Creates a transaction
+        that will be processed immediately or may require approval.
       operationId: createTransaction
       parameters:
       - in: path
         name: accountId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/PostTransactionAPIRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
           description: ''
@@ -3659,19 +4854,65 @@ paths:
           description: Invalid `body`
         '404':
           description: '`accountId` not found'
-      summary: Create a transaction
+      summary: Send money to a recipient
       tags:
       - Accounts
   /accounts:
     get:
+      description: Retrieve a paginated list of accounts. Supports cursor-based pagination
+        with limit, order, start_after, and end_before query parameters.
       operationId: getAccounts
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the account to start the page after (exclusive).
+            When provided, results will begin with the account immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the account to end the page before (exclusive). When
+            provided, results will end just before this ID and work backwards. Use
+            this for reverse pagination or to retrieve previous pages. Cannot be combined
+            with start_after.
+          format: uuid
+          type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                $ref: '#/components/schemas/AccountsResponse'
+                $ref: '#/components/schemas/AccountsPaginatedResponse'
           description: ''
+        '400':
+          description: Invalid `end_before` or `start_after` or `order` or `limit`
       summary: Get all accounts
       tags:
       - Accounts
@@ -3684,13 +4925,13 @@ paths:
         name: attachmentId
         required: true
         schema:
-          description: ID for the attachment
+          description: ID for the attachment.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArAttachmentResponseData'
           description: ''
@@ -3701,15 +4942,60 @@ paths:
       - Invoices
   /ar/customers:
     get:
-      description: Retrieve a list of all customers for the organization
+      description: Retrieve a paginated list of customers. Supports cursor-based pagination
+        with limit, order, start_after, and end_before query parameters.
       operationId: listCustomers
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the customer to start the page after (exclusive).
+            When provided, results will begin with the customer immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the customer to end the page before (exclusive).
+            When provided, results will end just before this ID and work backwards.
+            Use this for reverse pagination or to retrieve previous pages. Cannot
+            be combined with start_after.
+          format: uuid
+          type: string
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                $ref: '#/components/schemas/ApiV1ArCustomersResponseData'
+                $ref: '#/components/schemas/ApiV1ArCustomerPaginatedResponseData'
           description: ''
+        '400':
+          description: Invalid `order` or `end_before` or `start_after` or `limit`
       summary: List all customers
       tags:
       - Customers
@@ -3718,13 +5004,13 @@ paths:
       operationId: createCustomer
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/ApiV1ArCustomerCreateRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArCustomerResponseData'
           description: ''
@@ -3742,13 +5028,15 @@ paths:
         name: customerId
         required: true
         schema:
-          description: ID for the customer
+          description: The customer who will receive the invoice. Use the /api/v1/ar/customers
+            endpoint to list your customers and find the corresponding id, or create
+            a new customer first.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8: {}
+            application/json: {}
           description: ''
         '404':
           description: '`customerId` not found'
@@ -3763,13 +5051,15 @@ paths:
         name: customerId
         required: true
         schema:
-          description: ID for the customer
+          description: The customer who will receive the invoice. Use the /api/v1/ar/customers
+            endpoint to list your customers and find the corresponding id, or create
+            a new customer first.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArCustomerResponseData'
           description: ''
@@ -3786,18 +5076,20 @@ paths:
         name: customerId
         required: true
         schema:
-          description: ID for the customer
+          description: The customer who will receive the invoice. Use the /api/v1/ar/customers
+            endpoint to list your customers and find the corresponding id, or create
+            a new customer first.
           format: uuid
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/ApiV1ArCustomerUpdateRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArCustomerResponseData'
           description: ''
@@ -3810,15 +5102,60 @@ paths:
       - Customers
   /ar/invoices:
     get:
-      description: Retrieve a list of all invoices for the organization
+      description: Retrieve a paginated list of invoices. Supports cursor-based pagination
+        with limit, order, start_after, and end_before query parameters.
       operationId: listInvoices
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the invoice to start the page after (exclusive).
+            When provided, results will begin with the invoice immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the invoice to end the page before (exclusive). When
+            provided, results will end just before this ID and work backwards. Use
+            this for reverse pagination or to retrieve previous pages. Cannot be combined
+            with start_after.
+          format: uuid
+          type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                $ref: '#/components/schemas/ApiV1ArInvoicesResponseData'
+                $ref: '#/components/schemas/ApiV1ArInvoicesPaginatedResponse'
           description: ''
+        '400':
+          description: Invalid `end_before` or `start_after` or `order` or `limit`
       summary: List all invoices
       tags:
       - Invoices
@@ -3827,13 +5164,13 @@ paths:
       operationId: createInvoice
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/ApiV1ArInvoiceCreateRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArInvoiceResponse'
           description: ''
@@ -3851,13 +5188,13 @@ paths:
         name: invoiceId
         required: true
         schema:
-          description: ID for the invoice
+          description: ID for the invoice.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArInvoiceResponse'
           description: ''
@@ -3874,18 +5211,18 @@ paths:
         name: invoiceId
         required: true
         schema:
-          description: ID for the invoice
+          description: ID for the invoice.
           format: uuid
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/ApiV1ArInvoiceUpdateRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArInvoiceResponse'
           description: ''
@@ -3905,13 +5242,13 @@ paths:
         name: invoiceId
         required: true
         schema:
-          description: ID for the invoice
+          description: ID for the invoice.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiV1ArAttachmentsResponseData'
           description: ''
@@ -3929,13 +5266,13 @@ paths:
         name: invoiceId
         required: true
         schema:
-          description: ID for the invoice
+          description: ID for the invoice.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8: {}
+            application/json: {}
           description: ''
         '404':
           description: '`invoiceId` not found'
@@ -3952,7 +5289,7 @@ paths:
         name: invoiceId
         required: true
         schema:
-          description: ID for the invoice
+          description: ID for the invoice.
           format: uuid
           type: string
       responses:
@@ -3971,20 +5308,596 @@ paths:
       summary: Download invoice PDF
       tags:
       - Invoices
-  /categories:
-    get:
-      description: Retrieve a list of all available custom expense categories for
-        the organization.
-      operationId: listCategories
+  /books/agent-coa-template/{coaTemplateId}:
+    delete:
+      description: Delete a specific Chart of Accounts template.
+      operationId: deleteBooksAgentCoaTemplate
+      parameters:
+      - in: path
+        name: coaTemplateId
+        required: true
+        schema:
+          description: unique id for a chart of accounts template
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/CategoryData'
+                example: []
+                items: {}
+                maxItems: 0
                 type: array
           description: ''
+        '404':
+          description: '`coaTemplateId` not found'
+      summary: Delete a Chart of Accounts Template
+      tags:
+      - Books
+      x-internal: true
+    get:
+      description: Retrieve details of a specific Chart of Accounts template.
+      operationId: getBooksAgentCoaTemplate
+      parameters:
+      - in: path
+        name: coaTemplateId
+        required: true
+        schema:
+          description: unique id for a chart of accounts template
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      - in: query
+        name: expand
+        required: false
+        schema:
+          description: Comma-separated list of expandable paths.
+          enum:
+          - ledgers
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBooksAPIAgentCoaTemplateResponse'
+          description: ''
+        '400':
+          description: Invalid `expand`
+        '404':
+          description: '`coaTemplateId` not found'
+      summary: Retrieve a Chart of Accounts Template
+      tags:
+      - Books
+      x-internal: true
+  /books/agent-coa-templates:
+    get:
+      description: Retrieve a paginated list of all default and agent-owned Chart
+        of Accounts templates. These templates can be used when creating new Books
+        instances for clients.
+      operationId: getBooksAgentCoaTemplates
+      parameters:
+      - in: query
+        name: pageToken
+        required: false
+        schema:
+          description: token for pagination
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          description: The number of records to return. Max limit is 100.
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          type: integer
+      - in: query
+        name: expand
+        required: false
+        schema:
+          description: Comma-separated list of expandable paths.
+          enum:
+          - ledgers
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBooksAPIAgentCoaTemplatesResponse'
+          description: ''
+        '400':
+          description: Invalid `expand` or `limit` or `pageToken`
+      summary: List all Chart of Accounts Templates
+      tags:
+      - Books
+      x-internal: true
+    post:
+      description: Create a new agent-owned Chart of Accounts template. These templates
+        can be used when creating new Books instances for clients.
+      operationId: postBooksAgentCoaTemplates
+      parameters:
+      - in: query
+        name: expand
+        required: false
+        schema:
+          description: Comma-separated list of expandable paths.
+          enum:
+          - ledgers
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBooksAPICoaTemplateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBooksAPIAgentCoaTemplateResponse'
+          description: ''
+        '400':
+          description: Invalid `body` or `expand`
+      summary: Create a Chart of Accounts Template
+      tags:
+      - Books
+      x-internal: true
+  /books/agent-ledger-template/{ledgerId}:
+    delete:
+      description: Delete an existing ledger within an agent-owned Chart of Accounts
+        template.
+      operationId: deleteBooksAgentLedgerTemplate
+      parameters:
+      - in: path
+        name: ledgerId
+        required: true
+        schema:
+          description: unique id for a ledger
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                example: []
+                items: {}
+                maxItems: 0
+                type: array
+          description: ''
+        '404':
+          description: '`ledgerId` not found'
+      summary: Delete a Ledger Template
+      tags:
+      - Books
+      x-internal: true
+    put:
+      description: Update an existing ledger within an agent-owned Chart of Accounts
+        template.
+      operationId: putBooksAgentLedgerTemplate
+      parameters:
+      - in: path
+        name: ledgerId
+        required: true
+        schema:
+          description: unique id for a ledger
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBooksAPILedgerTemplateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateBooksAPIAgentLedgerTemplateResponse'
+          description: ''
+        '400':
+          description: Invalid `body`
+        '404':
+          description: '`ledgerId` not found'
+      summary: Update a Ledger Template
+      tags:
+      - Books
+      x-internal: true
+  /books/agent-ledger-templates:
+    post:
+      description: Create a new ledger within an agent-owned Chart of Accounts template.
+      operationId: postBooksAgentLedgerTemplates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBooksAPILedgerTemplateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBooksAPIAgentLedgerTemplateResponse'
+          description: ''
+        '400':
+          description: Invalid `body`
+      summary: Create a Ledger Template
+      tags:
+      - Books
+      x-internal: true
+  /books/journal-entries/{booksId}:
+    delete:
+      operationId: deleteBooksJournalEntries
+      parameters:
+      - in: path
+        name: booksId
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteBooksAPIJournalEntriesRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                example: []
+                items: {}
+                maxItems: 0
+                type: array
+          description: ''
+        '400':
+          description: Invalid `body`
+        '404':
+          description: '`booksId` not found'
+      summary: Bulk delete journal entries
+      tags:
+      - Books
+      x-internal: true
+    get:
+      operationId: getBooksJournalEntries
+      parameters:
+      - in: path
+        name: booksId
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - in: query
+        name: startDate
+        required: false
+        schema:
+          description: Only return Journal Entries after the start date (inclusive).
+          format: date
+          type: string
+      - in: query
+        name: endDate
+        required: false
+        schema:
+          description: Only return Journal Entries before the end date (inclusive).
+          format: date
+          type: string
+      - in: query
+        name: ledgerId
+        required: false
+        schema:
+          description: Only return Journal Entries where at least one Line Entry belongs
+            to the specified Ledger.
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      - in: query
+        name: creationSource
+        required: false
+        schema:
+          description: Only return Journal Entries with the specified creation source.
+          enum:
+          - manual
+          - transaction
+          - accrual
+          - paymentApplication
+          - legacy
+          type: string
+      - in: query
+        name: journalEntrySort
+        required: false
+        schema:
+          description: The sort order for the results.
+          enum:
+          - descriptionAsc
+          - descriptionDesc
+          - dateTimeAsc
+          - dateTimeDesc
+          - amountAsc
+          - amountDesc
+          type: string
+      - in: query
+        name: expand
+        required: false
+        schema:
+          description: Comma-separated list of expandable paths.
+          enum:
+          - lineEntries
+          - lineEntries.transactions
+          - lineEntries.ledger
+          - lineEntries.opposingLedgerIds
+          - lineEntries.paymentApplications
+          - accrualSource
+          type: string
+      - in: query
+        name: pageToken
+        required: false
+        schema:
+          description: token for pagination
+          type: string
+      - in: query
+        name: keywords
+        required: false
+        schema:
+          description: Only return Journal Entries where the description matches the
+            specified keyword(s).
+          type: string
+      - in: query
+        name: amount
+        required: false
+        schema:
+          description: Only return journal entries with the specified monetary amount.  If
+            specified, `minAmount` and `maxAmount` parameters are ignored.  If no
+            decimal place provided, rounded values will be matched.  E.g. an input
+            of `100` will match 100.13 and 100.45, but an input of `100.13` will only
+            match that value.
+          format: double
+          type: number
+      - in: query
+        name: minAmount
+        required: false
+        schema:
+          description: Only return journal entries with a monetary amount of at least
+            the specified amount.  Ignored if `amount` is set.
+          format: double
+          type: number
+      - in: query
+        name: maxAmount
+        required: false
+        schema:
+          description: Only return journal entries with a monetary amount less than
+            specified amount.  Ignored if `amount` is set.
+          format: double
+          type: number
+      - in: query
+        name: ledgerIdGroups
+        required: false
+        schema:
+          description: One or more comma-separated lists of ledger IDs.  Only return
+            Journal Entries where at least one Line Entry belongs to one of the specified
+            ledgers in a group.  Specifying multiple groups will return an intersection
+            of the matches.
+          items:
+            description: unique id for a ledger
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          type: array
+      - in: query
+        name: limit
+        required: false
+        schema:
+          description: The maximum number of journal entries to return per page.
+          format: int32
+          maximum: 4294967295
+          minimum: 0
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBooksAPIJournalEntriesResponse'
+          description: ''
+        '400':
+          description: Invalid `limit` or `ledgerIdGroups` or `maxAmount` or `minAmount`
+            or `amount` or `keywords` or `pageToken` or `expand` or `journalEntrySort`
+            or `creationSource` or `ledgerId` or `endDate` or `startDate`
+        '404':
+          description: '`booksId` not found'
+      summary: List all journal entries
+      tags:
+      - Books
+      x-internal: true
+    post:
+      operationId: postBooksJournalEntries
+      parameters:
+      - in: path
+        name: booksId
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - in: query
+        name: expand
+        required: false
+        schema:
+          description: Comma-separated list of expandable paths.
+          enum:
+          - lineEntries
+          - lineEntries.transactions
+          - lineEntries.ledger
+          - lineEntries.opposingLedgerIds
+          - lineEntries.paymentApplications
+          - accrualSource
+          type: string
+      - in: query
+        name: modifiedBy
+        required: false
+        schema:
+          description: An optional identifier for audit logging.
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: '#/components/schemas/CreateBooksAPIJournalEntryRequest'
+              type: array
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBooksAPIJournalEntriesBulkResponse'
+          description: ''
+        '400':
+          description: Invalid `body` or `modifiedBy` or `expand`
+        '404':
+          description: '`booksId` not found'
+      summary: Create multiple Journal Entries
+      tags:
+      - Books
+      x-internal: true
+    put:
+      operationId: putBooksJournalEntries
+      parameters:
+      - in: path
+        name: booksId
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBooksAPIJournalEntriesRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                example: []
+                items: {}
+                maxItems: 0
+                type: array
+          description: ''
+        '400':
+          description: Invalid `body`
+        '404':
+          description: '`booksId` not found'
+      summary: Bulk update journal entries
+      tags:
+      - Books
+      x-internal: true
+  /books/journal-entry/{booksId}/{journalEntryId}:
+    get:
+      operationId: getBooksJournalEntry
+      parameters:
+      - in: path
+        name: booksId
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - in: path
+        name: journalEntryId
+        required: true
+        schema:
+          description: unique id for a journal entry
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      - in: query
+        name: expand
+        required: false
+        schema:
+          enum:
+          - lineEntries
+          - lineEntries.transactions
+          - lineEntries.ledger
+          - lineEntries.opposingLedgerIds
+          - lineEntries.paymentApplications
+          - accrualSource
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBooksAPIJournalEntryResponse'
+          description: ''
+        '400':
+          description: Invalid `expand`
+        '404':
+          description: '`booksId` or `journalEntryId` not found'
+      summary: Retrieve a Journal Entry
+      tags:
+      - Books
+      x-internal: true
+  /categories:
+    get:
+      description: Retrieve a paginated list of all available custom expense categories
+        for the organization. Supports cursor-based pagination with limit, order,
+        start_after, and end_before query parameters.
+      operationId: listCategories
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the category to start the page after (exclusive).
+            When provided, results will begin with the category immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the category to end the page before (exclusive).
+            When provided, results will end just before this ID and work backwards.
+            Use this for reverse pagination or to retrieve previous pages. Cannot
+            be combined with start_after.
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriesPaginatedResponse'
+          description: ''
+        '400':
+          description: Invalid `end_before` or `start_after` or `order` or `limit`
       summary: List all categories
       tags:
       - Categories
@@ -3995,7 +5908,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/CreditAccountsResponse'
           description: ''
@@ -4068,7 +5981,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiEventsPaginatedResponse'
           description: ''
@@ -4092,13 +6005,13 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiEventResponse'
           description: ''
         '404':
           description: '`eventId` not found'
-      summary: Get event by id
+      summary: Get event by ID
       tags:
       - Events
   /organization:
@@ -4109,7 +6022,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/OrganizationResponse'
           description: ''
@@ -4125,19 +6038,19 @@ paths:
         name: recipientId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/RecipientInfo'
           description: ''
         '404':
           description: '`recipientId` not found'
-      summary: Get recipient by id
+      summary: Get recipient by ID
       tags:
       - Recipients
     post:
@@ -4148,18 +6061,18 @@ paths:
         name: recipientId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/EditRecipientRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/RecipientInfo'
           description: ''
@@ -4266,7 +6179,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/RecipientsPaginatedResponse'
           description: ''
@@ -4280,13 +6193,13 @@ paths:
       operationId: createRecipient
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/AddRecipientRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/RecipientInfo'
           description: ''
@@ -4346,7 +6259,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/RecipientsAttachmentsPaginatedResponse'
           description: ''
@@ -4369,15 +6282,85 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/SendMoneyApprovalRequestResponse'
           description: ''
         '404':
           description: '`requestId` not found'
-      summary: Get send money approval request by id
+      summary: Get send money approval request by ID
       tags:
       - Send Money
+  /safes:
+    get:
+      description: Retrieve all SAFE (Simple Agreement for Future Equity) requests
+        for your organization.
+      operationId: getSafeRequests
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/APISafeRequest'
+                type: array
+          description: ''
+      summary: Get all SAFEs
+      tags:
+      - SAFEs
+  /safes/{safeRequestId}:
+    get:
+      description: Retrieve a specific SAFE request by its ID.
+      operationId: getSafeRequest
+      parameters:
+      - in: path
+        name: safeRequestId
+        required: true
+        schema:
+          description: ID for the SAFE request
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APISafeRequest'
+          description: ''
+        '404':
+          description: '`safeRequestId` not found'
+      summary: Get SAFE by ID
+      tags:
+      - SAFEs
+  /safes/{safeRequestId}/document:
+    get:
+      description: Download the PDF document for a specific SAFE request. Returns
+        binary PDF data with a Content-Disposition header.
+      operationId: getSafeRequestDocument
+      parameters:
+      - in: path
+        name: safeRequestId
+        required: true
+        schema:
+          description: ID for the SAFE request
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                $ref: '#/components/schemas/PDFDocument'
+          description: ''
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+        '404':
+          description: '`safeRequestId` not found'
+      summary: Download SAFE document
+      tags:
+      - SAFEs
   /statements/{statementId}/pdf:
     get:
       description: Downloads a PDF file for the specified account statement. The response
@@ -4424,7 +6407,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
           description: ''
@@ -4447,13 +6430,13 @@ paths:
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/ApiUpdateTransactionRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
           description: ''
@@ -4580,7 +6563,7 @@ paths:
         name: accountId
         schema:
           items:
-            description: ID for the Mercury account
+            description: ID for a Mercury account.
             format: uuid
             type: string
           type: array
@@ -4651,7 +6634,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/TransactionsPaginatedResponse'
           description: ''
@@ -4665,17 +6648,19 @@ paths:
   /transfer:
     post:
       description: Transfer funds between two accounts within the same organization.
-        Creates paired debit and credit transactions.
+        Supports transfers between depository accounts (checking/savings), from a
+        depository account to a treasury/investment account, and from a treasury/investment
+        account to a depository account. Creates paired debit and credit transactions.
       operationId: createInternalTransfer
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/InternalTransferAPIRequest'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/InternalTransferAPIResponse'
           description: ''
@@ -4686,17 +6671,148 @@ paths:
       - Accounts
   /treasury:
     get:
-      description: Retrieve all treasury accounts associated with the authenticated
-        organization.
+      description: Retrieve a paginated list of all treasury accounts associated with
+        the authenticated organization. Use cursor parameters (start_after, end_before)
+        for pagination.
       operationId: getTreasury
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the account to start the page after (exclusive).
+            When provided, results will begin with the account immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the account to end the page before (exclusive). When
+            provided, results will end just before this ID and work backwards. Use
+            this for reverse pagination or to retrieve previous pages. Cannot be combined
+            with start_after.
+          format: uuid
+          type: string
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
-                $ref: '#/components/schemas/TreasuryAccountsResponse'
+                $ref: '#/components/schemas/TreasuryAccountsPaginatedResponse'
           description: ''
+        '400':
+          description: Invalid `order` or `end_before` or `start_after` or `limit`
       summary: Get all treasury accounts
+      tags:
+      - Treasury
+  /treasury/{treasuryId}/statements:
+    get:
+      description: Retrieve a paginated list of statements for a specific treasury
+        account. Supports cursor-based pagination and filtering by document type.
+      operationId: getTreasuryStatements
+      parameters:
+      - in: path
+        name: treasuryId
+        required: true
+        schema:
+          description: ID for a Mercury account.
+          format: uuid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the statement to start the page after (exclusive).
+            When provided, results will begin with the statement immediately following
+            this ID. Use this for standard forward pagination to get the next page
+            of results. Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the statement to end the page before (exclusive).
+            When provided, results will end just before this ID and work backwards.
+            Use this for reverse pagination or to retrieve previous pages. Cannot
+            be combined with start_after.
+          format: uuid
+          type: string
+      - in: query
+        name: documentType
+        required: false
+        schema:
+          description: Filter statements by document type.
+          enum:
+          - MonthlyStatement
+          - TradeConfirmation
+          - '1099'
+          - 1099R
+          - 1042S
+          - '5498'
+          - 5498ESA
+          - 1099Q
+          - FMV
+          - SDIRA
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreasuryStatementsPaginatedResponse'
+          description: ''
+        '400':
+          description: Invalid `documentType` or `end_before` or `start_after` or
+            `order` or `limit`
+        '404':
+          description: '`treasuryId` not found'
+      summary: Get treasury account statements
       tags:
       - Treasury
   /treasury/{treasuryId}/transactions:
@@ -4709,7 +6825,7 @@ paths:
         name: treasuryId
         required: true
         schema:
-          description: ID for the Mercury account
+          description: ID for a Mercury account.
           format: uuid
           type: string
       - in: query
@@ -4744,7 +6860,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/TreasuryTransactionsResponse'
           description: ''
@@ -4803,7 +6919,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/UsersPaginatedResponse'
           description: ''
@@ -4826,13 +6942,13 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/UserDetails'
           description: ''
         '404':
           description: '`userId` not found'
-      summary: Get user by id
+      summary: Get user by ID
       tags:
       - Users
   /webhooks:
@@ -4896,7 +7012,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiWebhooksPaginatedResponse'
           description: ''
@@ -4911,13 +7027,13 @@ paths:
       operationId: createWebhook
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/CreateWebhookParams'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiWebhookResponse'
           description: ''
@@ -4941,7 +7057,7 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8: {}
+            application/json: {}
           description: ''
         '404':
           description: '`webhookEndpointId` not found'
@@ -4962,17 +7078,19 @@ paths:
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiWebhookResponse'
           description: ''
         '404':
           description: '`webhookEndpointId` not found'
-      summary: Get webhook endpoint by id
+      summary: Get webhook endpoint by ID
       tags:
       - Webhooks
     post:
-      description: Update the configuration of an existing webhook endpoint
+      description: Update the configuration of an existing webhook endpoint. A webhook
+        that has been disabled due to consecutive delivery failures can be reactivated
+        by setting its status to 'active'.
       operationId: updateWebhook
       parameters:
       - in: path
@@ -4984,13 +7102,13 @@ paths:
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/UpdateWebhookParams'
       responses:
         '200':
           content:
-            application/json;charset=utf-8:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiWebhookResponse'
           description: ''
@@ -5018,13 +7136,13 @@ paths:
           type: string
       requestBody:
         content:
-          application/json;charset=utf-8:
+          application/json:
             schema:
               $ref: '#/components/schemas/VerifyWebhookParams'
       responses:
         '200':
           content:
-            application/json;charset=utf-8: {}
+            application/json: {}
           description: ''
         '400':
           description: Invalid `body`
@@ -5068,3 +7186,8 @@ tags:
   name: Webhooks
 - description: Manage organization team members
   name: Users
+- description: Manage SAFE (Simple Agreement for Future Equity) requests
+  name: SAFEs
+- description: Manage organization books
+  name: Books
+  x-internal: true

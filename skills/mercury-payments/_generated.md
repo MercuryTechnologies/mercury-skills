@@ -6,7 +6,7 @@
 
 **Operation:** `createInternalTransfer`
 **Summary:** Create an internal transfer
-**Description:** Transfer funds between two accounts within the same organization. Creates paired debit and credit transactions.
+**Description:** Transfer funds between two accounts within the same organization. Supports transfers between depository accounts (checking/savings), from a depository account to a treasury/investment account, and from a treasury/investment account to a depository account. Creates paired debit and credit transactions.
 
 ### Parameters
 

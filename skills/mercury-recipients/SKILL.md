@@ -35,14 +35,14 @@ metadata:
 ## GET /recipient/{recipientId}
 
 **Operation:** `getRecipient`
-**Summary:** Get recipient by id
+**Summary:** Get recipient by ID
 **Description:** Retrieve details of a specific recipient by ID
 
 ### Parameters
 
 | Name | In | Type | Required | Description |
 |------|------|------|----------|-------------|
-| `recipientId` | path | string (uuid) | Yes | ID for the Mercury account |
+| `recipientId` | path | string (uuid) | Yes | ID for a Mercury account. |
 
 ### Response (200)
 
@@ -60,7 +60,7 @@ Schema: `RecipientInfo`
 
 | Name | In | Type | Required | Description |
 |------|------|------|----------|-------------|
-| `recipientId` | path | string (uuid) | Yes | ID for the Mercury account |
+| `recipientId` | path | string (uuid) | Yes | ID for a Mercury account. |
 
 ### Request Body
 

@@ -65,7 +65,7 @@ Schema: `UsersPaginatedResponse`
 ## GET /users/{userId}
 
 **Operation:** `getUser`
-**Summary:** Get user by id
+**Summary:** Get user by ID
 
 ### Parameters
 

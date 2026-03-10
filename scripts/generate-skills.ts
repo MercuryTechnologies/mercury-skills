@@ -3,29 +3,26 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 
+interface TagDefinition {
+  name: string;
+  description?: string;
+  'x-internal'?: boolean;
+}
+
+interface OpenAPISpec {
+  paths: Record<string, Record<string, Operation>>;
+  tags?: TagDefinition[];
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SKILLS_DIR = path.resolve(__dirname, '../skills');
+const SKILLS_DIR = path.resolve(__dirname, '../skills/api');
 const SPEC_PATH = path.resolve(__dirname, '../openapi/mercuryapi.yaml');
 
-// Path prefix -> resource group mapping
-const PATH_ROUTING: Array<{ match: (p: string) => boolean; group: string | null }> = [
-  { match: (p) => p === '/request-send-money/{requestId}', group: null }, // skip
-  { match: (p) => p.startsWith('/events'), group: null }, // skip
-  { match: (p) => p.startsWith('/ar/'), group: null }, // skip
-  { match: (p) => p.startsWith('/account') || p.startsWith('/accounts'), group: 'mercury-accounts' },
-  { match: (p) => p.startsWith('/transaction') || p.startsWith('/transactions'), group: 'mercury-transactions' },
-  { match: (p) => p.startsWith('/recipient') || p.startsWith('/recipients'), group: 'mercury-recipients' },
-  { match: (p) => p.startsWith('/request-send-money') || p.startsWith('/transfer'), group: 'mercury-payments' },
-  { match: (p) => p.startsWith('/statements'), group: 'mercury-statements' },
-  { match: (p) => p.startsWith('/treasury'), group: 'mercury-treasury' },
-  { match: (p) => p.startsWith('/credit'), group: 'mercury-credit' },
-  { match: (p) => p.startsWith('/categories'), group: 'mercury-categories' },
-  { match: (p) => p.startsWith('/organization'), group: 'mercury-organization' },
-  { match: (p) => p.startsWith('/webhooks'), group: 'mercury-webhooks' },
-  { match: (p) => p.startsWith('/users'), group: 'mercury-organization' },
-];
+function tagToGroup(tag: string): string {
+  return tag.toLowerCase().replace(/\s+/g, '-');
+}
 
 interface Parameter {
   name: string;
@@ -46,6 +43,8 @@ interface Operation {
   operationId: string;
   summary?: string;
   description?: string;
+  tags?: string[];
+  'x-internal'?: boolean;
   parameters?: Parameter[];
   requestBody?: {
     content?: Record<string, { schema?: { $ref?: string; properties?: Record<string, unknown> } }>;
@@ -64,14 +63,6 @@ interface GroupedEndpoint {
 }
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
-
-function classifyPath(apiPath: string): string | null {
-  for (const rule of PATH_ROUTING) {
-    if (rule.match(apiPath)) return rule.group;
-  }
-  console.warn(`  [WARN] No mapping for path: ${apiPath}`);
-  return null;
-}
 
 function getParamType(param: Parameter): string {
   const s = param.schema;
@@ -196,7 +187,7 @@ function generateGeneratedMd(group: string, endpoints: GroupedEndpoint[]): strin
 }
 
 function deriveDescription(group: string, endpoints: GroupedEndpoint[]): string {
-  const resource = group.replace('mercury-', '');
+  const resource = group;
   const opSummaries = endpoints.map(e => e.operation.summary).filter(Boolean);
   if (opSummaries.length > 0) {
     return `Mercury ${resource} API operations: ${opSummaries.slice(0, 3).join(', ').toLowerCase()}${opSummaries.length > 3 ? ', and more' : ''}.`;
@@ -205,7 +196,7 @@ function deriveDescription(group: string, endpoints: GroupedEndpoint[]): string 
 }
 
 function generateFrontmatter(group: string, endpoints: GroupedEndpoint[]): string {
-  const resource = group.replace('mercury-', '');
+  const resource = group;
   const operationIds = endpoints.map(e => e.operation.operationId);
   const mcpTools = endpoints
     .filter(e => e.method === 'get')
@@ -216,7 +207,7 @@ function generateFrontmatter(group: string, endpoints: GroupedEndpoint[]): strin
   if (hasWriteMethods) scopes.push(`${resource}:write`);
 
   const frontmatter: Record<string, unknown> = {
-    name: group,
+    name: `mercury-${group}`,
     version: '1.0.0',
     description: deriveDescription(group, endpoints),
     category: 'service',
@@ -248,27 +239,52 @@ function generateSkillMd(group: string, endpoints: GroupedEndpoint[], generatedC
 function main() {
   console.log('Loading OpenAPI spec...');
   const specRaw = fs.readFileSync(SPEC_PATH, 'utf-8');
-  const spec = yaml.load(specRaw) as { paths: Record<string, Record<string, Operation>> };
+  const spec = yaml.load(specRaw) as OpenAPISpec;
 
   if (!spec.paths) {
     console.error('No paths found in spec');
     process.exit(1);
   }
 
-  // Group endpoints by resource
+  // Build set of internal tags from top-level tag definitions
+  const internalTags = new Set<string>();
+  if (spec.tags) {
+    for (const tagDef of spec.tags) {
+      if (tagDef['x-internal']) {
+        internalTags.add(tagDef.name);
+      }
+    }
+  }
+
+  // Group endpoints by their first tag
   const groups = new Map<string, GroupedEndpoint[]>();
 
   for (const [apiPath, pathItem] of Object.entries(spec.paths)) {
-    const group = classifyPath(apiPath);
-    if (group === null) {
-      console.log(`  Skipping: ${apiPath}`);
-      continue;
-    }
-
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];
       if (!operation) continue;
 
+      // Skip x-internal operations
+      if (operation['x-internal']) {
+        console.log(`  Skipping internal operation: ${method.toUpperCase()} ${apiPath}`);
+        continue;
+      }
+
+      const tags = operation.tags;
+      if (!tags || tags.length === 0) {
+        console.warn(`  [WARN] No tags for operation: ${method.toUpperCase()} ${apiPath}`);
+        continue;
+      }
+
+      const tag = tags[0];
+
+      // Skip operations whose first tag is internal
+      if (internalTags.has(tag)) {
+        console.log(`  Skipping internal tag "${tag}": ${method.toUpperCase()} ${apiPath}`);
+        continue;
+      }
+
+      const group = tagToGroup(tag);
       if (!groups.has(group)) groups.set(group, []);
       groups.get(group)!.push({ method, path: apiPath, operation });
     }
@@ -305,6 +321,29 @@ function main() {
     const skillPath = path.join(skillDir, 'SKILL.md');
     fs.writeFileSync(skillPath, skillContent, 'utf-8');
     console.log(`    Wrote: SKILL.md`);
+  }
+
+  // Clean up stale skill directories no longer generated
+  const generatedGroups = new Set(groups.keys());
+  const existingDirs = fs.readdirSync(SKILLS_DIR, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+  for (const dirName of existingDirs) {
+    if (generatedGroups.has(dirName)) continue;
+
+    const dirPath = path.join(SKILLS_DIR, dirName);
+    const hasGenerated = fs.existsSync(path.join(dirPath, '_generated.md'));
+    if (!hasGenerated) continue; // not a generated skill, skip
+
+    const hasEnrichments = fs.existsSync(path.join(dirPath, '_enrichments.md'));
+
+    if (hasEnrichments) {
+      console.warn(`  [WARN] Stale directory with _enrichments.md, skipping delete: ${dirName}`);
+    } else {
+      fs.rmSync(dirPath, { recursive: true });
+      console.log(`  Removed stale directory: ${dirName}`);
+    }
   }
 
   console.log('\nDone.');

@@ -35,10 +35,25 @@ async function main() {
     fs.mkdirSync(distDir, { recursive: true });
   }
 
-  const skillDirs = fs
-    .readdirSync(skillsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const skillDirs: string[] = [];
+
+  // Collect skill directories from shared/, api/*, and agentic/*
+  for (const subdir of ["shared", "api", "agentic"]) {
+    const subdirPath = path.join(skillsDir, subdir);
+    if (!fs.existsSync(subdirPath)) continue;
+
+    if (subdir === "shared") {
+      // shared/ is itself a skill directory
+      skillDirs.push(subdir);
+    } else {
+      // api/ and agentic/ contain skill subdirectories
+      const children = fs
+        .readdirSync(subdirPath, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => path.join(subdir, d.name));
+      skillDirs.push(...children);
+    }
+  }
 
   // Read and parse all SKILL.md files, filtering to cli channel
   const skills: Array<{ data: SkillFrontmatter; content: string }> = [];

@@ -1,13 +1,22 @@
 {
-  "name": "mercury-skills",
+  "name": "@mercurytechnologies/skills",
   "version": "1.0.0",
   "description": "Centralized skills directory for Mercury API agent guidance",
   "type": "module",
+  "main": "dist/skills-bundle.json",
+  "exports": {
+    ".": "./dist/skills-bundle.json",
+    "./dist/skills-bundle.json": "./dist/skills-bundle.json"
+  },
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "generate": "tsx scripts/generate-skills.ts",
     "build:mcp": "tsx scripts/build-mcp-bundle.ts",
     "build:cli": "tsx scripts/build-cli-instructions.ts",
-    "build": "npm run generate && npm run build:mcp && npm run build:cli"
+    "build": "npm run generate && npm run build:mcp && npm run build:cli",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

@@ -21,11 +21,19 @@ interface SkillFrontmatter {
   };
 }
 
+interface AgenticSkill {
+  name: string;
+  description: string;
+  content: string;
+  requiredTools: string[];
+}
+
 interface SkillsBundle {
   version: string;
   generatedAt: string;
   serverInstructions: string;
   toolDescriptionExtras: Record<string, string>;
+  agenticSkills: AgenticSkill[];
 }
 
 async function main() {
@@ -57,9 +65,11 @@ async function main() {
 
   let serverInstructions = "";
   const toolDescriptionExtras: Record<string, string> = {};
+  const agenticSkills: AgenticSkill[] = [];
   let sharedCount = 0;
   let serviceCount = 0;
   let toolCount = 0;
+  let agenticCount = 0;
 
   // First pass: read all SKILL.md files
   const skills: Array<{ data: SkillFrontmatter; content: string; dir: string }> = [];
@@ -121,11 +131,27 @@ async function main() {
     }
   }
 
+  // Build agenticSkills from agentic category skills with content
+  for (const skill of skills) {
+    if (skill.data.category !== "agentic") continue;
+    if (!skill.data.channels?.includes("mcp")) continue;
+
+    agenticSkills.push({
+      name: skill.data.name,
+      description: skill.data.description,
+      content: skill.content.trim(),
+      requiredTools: skill.data.metadata?.mcp_tools || [],
+    });
+    agenticCount++;
+    console.log(`  Added agentic skill: ${skill.data.name}`);
+  }
+
   const bundle: SkillsBundle = {
     version: "1.0.0",
     generatedAt: new Date().toISOString(),
     serverInstructions,
     toolDescriptionExtras,
+    agenticSkills,
   };
 
   const outPath = path.join(distDir, "skills-bundle.json");
@@ -135,6 +161,7 @@ async function main() {
   console.log(`  Shared skills: ${sharedCount}`);
   console.log(`  Service skills: ${serviceCount}`);
   console.log(`  Tool extras: ${toolCount}`);
+  console.log(`  Agentic skills: ${agenticCount}`);
 }
 
 main().catch((err) => {

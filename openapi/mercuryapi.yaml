@@ -1695,6 +1695,7 @@ components:
       - open
       - paid
       - draft
+      - cancelled
       type: string
     BooksChartOfAccountsTemplate:
       description: ' A chart of accounts template'
@@ -4186,6 +4187,9 @@ components:
       - sweepOutPosted
       - sweepReconcilePosted
       - valuationChangePosted
+      - oemsMutualFundOrderSettled
+      - oemsMutualFundOrderCanceled
+      - oemsMutualFundOrderRejected
       type: string
     TreasuryTransactionsResponse:
       description: ' Response type for treasury transactions API endpoint'

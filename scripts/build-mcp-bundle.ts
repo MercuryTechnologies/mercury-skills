@@ -9,13 +9,13 @@ const distDir = path.resolve(__dirname, "../dist");
 
 interface SkillFrontmatter {
   name: string;
-  version: string;
   description: string;
-  category: string;
-  scopes: string[];
-  requires: { skills: string[] };
-  channels: string[];
   metadata: {
+    version?: string;
+    category?: string;
+    scopes?: string[];
+    requires?: string[];
+    channels?: string[];
     api_resources?: string[];
     mcp_tools?: string[];
   };
@@ -45,23 +45,12 @@ async function main() {
 
   const skillDirs: string[] = [];
 
-  // Collect skill directories from shared/, api/*, and agentic/*
-  for (const subdir of ["shared", "api", "agentic"]) {
-    const subdirPath = path.join(skillsDir, subdir);
-    if (!fs.existsSync(subdirPath)) continue;
-
-    if (subdir === "shared") {
-      // shared/ is itself a skill directory
-      skillDirs.push(subdir);
-    } else {
-      // api/ and agentic/ contain skill subdirectories
-      const children = fs
-        .readdirSync(subdirPath, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .map((d) => path.join(subdir, d.name));
-      skillDirs.push(...children);
-    }
-  }
+  // Collect all skill directories (flat structure: skills/mercury-*)
+  const children = fs
+    .readdirSync(skillsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name.startsWith("mercury-"))
+    .map((d) => d.name);
+  skillDirs.push(...children);
 
   let serverInstructions = "";
   const toolDescriptionExtras: Record<string, string> = {};
@@ -87,7 +76,7 @@ async function main() {
   }
 
   // Build serverInstructions: start with mercury-shared body
-  const shared = skills.find((s) => s.data.category === "shared");
+  const shared = skills.find((s) => s.data.metadata?.category === "shared");
   if (shared) {
     serverInstructions = shared.content.trim();
     sharedCount++;
@@ -96,8 +85,8 @@ async function main() {
 
   // Append critical behavioral rules from other skills that belong in server instructions
   for (const skill of skills) {
-    if (skill.data.category === "shared") continue;
-    if (!skill.data.channels?.includes("mcp")) continue;
+    if (skill.data.metadata?.category === "shared") continue;
+    if (!skill.data.metadata?.channels?.includes("mcp")) continue;
 
     // Extract critical rules sections if present
     const criticalMatch = skill.content.match(/## Critical Rules[\s\S]*?(?=\n## |\n# |$)/);
@@ -109,7 +98,7 @@ async function main() {
 
   // Build toolDescriptionExtras from service skills with mcp_tools
   for (const skill of skills) {
-    if (skill.data.category !== "service") continue;
+    if (skill.data.metadata?.category !== "service") continue;
     const mcpTools = skill.data.metadata?.mcp_tools;
     if (!mcpTools || mcpTools.length === 0) continue;
 
@@ -133,8 +122,8 @@ async function main() {
 
   // Build agenticSkills from agentic category skills with content
   for (const skill of skills) {
-    if (skill.data.category !== "agentic") continue;
-    if (!skill.data.channels?.includes("mcp")) continue;
+    if (skill.data.metadata?.category !== "agentic") continue;
+    if (!skill.data.metadata?.channels?.includes("mcp")) continue;
 
     agenticSkills.push({
       name: skill.data.name,

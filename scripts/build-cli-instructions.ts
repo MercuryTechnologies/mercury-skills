@@ -9,13 +9,15 @@ const distDir = path.resolve(__dirname, "../dist");
 
 interface SkillFrontmatter {
   name: string;
-  version: string;
   description: string;
-  category: string;
-  scopes: string[];
-  requires: { skills: string[] };
-  channels: string[];
-  metadata: Record<string, unknown>;
+  metadata: {
+    version?: string;
+    category?: string;
+    scopes?: string[];
+    requires?: string[];
+    channels?: string[];
+    [key: string]: unknown;
+  };
 }
 
 const CATEGORY_ORDER = ["shared", "service", "workflow", "helper", "agentic"] as const;
@@ -37,23 +39,12 @@ async function main() {
 
   const skillDirs: string[] = [];
 
-  // Collect skill directories from shared/, api/*, and agentic/*
-  for (const subdir of ["shared", "api", "agentic"]) {
-    const subdirPath = path.join(skillsDir, subdir);
-    if (!fs.existsSync(subdirPath)) continue;
-
-    if (subdir === "shared") {
-      // shared/ is itself a skill directory
-      skillDirs.push(subdir);
-    } else {
-      // api/ and agentic/ contain skill subdirectories
-      const children = fs
-        .readdirSync(subdirPath, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .map((d) => path.join(subdir, d.name));
-      skillDirs.push(...children);
-    }
-  }
+  // Collect all skill directories (flat structure: skills/mercury-*)
+  const children = fs
+    .readdirSync(skillsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name.startsWith("mercury-"))
+    .map((d) => d.name);
+  skillDirs.push(...children);
 
   // Read and parse all SKILL.md files, filtering to cli channel
   const skills: Array<{ data: SkillFrontmatter; content: string }> = [];
@@ -68,19 +59,19 @@ async function main() {
     const raw = fs.readFileSync(skillPath, "utf-8");
     const { data, content } = matter(raw) as { data: SkillFrontmatter; content: string };
 
-    if (!data.channels?.includes("cli")) {
+    if (!data.metadata?.channels?.includes("cli")) {
       console.log(`  Skipping ${dir} (not in cli channel)`);
       continue;
     }
 
     skills.push({ data, content });
-    console.log(`  Included ${dir} (${data.category})`);
+    console.log(`  Included ${dir} (${data.metadata?.category})`);
   }
 
   // Group by category
   const grouped = new Map<string, Array<{ data: SkillFrontmatter; content: string }>>();
   for (const skill of skills) {
-    const cat = skill.data.category;
+    const cat = skill.data.metadata?.category || "unknown";
     if (!grouped.has(cat)) {
       grouped.set(cat, []);
     }

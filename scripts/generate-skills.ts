@@ -17,7 +17,7 @@ interface OpenAPISpec {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SKILLS_DIR = path.resolve(__dirname, '../skills/api');
+const SKILLS_DIR = path.resolve(__dirname, '../skills');
 const SPEC_PATH = path.resolve(__dirname, '../openapi/mercuryapi.yaml');
 
 function tagToGroup(tag: string): string {
@@ -208,13 +208,13 @@ function generateFrontmatter(group: string, endpoints: GroupedEndpoint[]): strin
 
   const frontmatter: Record<string, unknown> = {
     name: `mercury-${group}`,
-    version: '1.0.0',
     description: deriveDescription(group, endpoints),
-    category: 'service',
-    scopes,
-    requires: { skills: ['mercury-shared'] },
-    channels: ['mcp', 'cli'],
     metadata: {
+      version: '1.0.0',
+      category: 'service',
+      scopes,
+      requires: ['mercury-shared'],
+      channels: ['mcp', 'cli'],
       api_resources: operationIds,
       mcp_tools: mcpTools,
     },
@@ -294,7 +294,7 @@ function main() {
 
   for (const [group, endpoints] of groups) {
     console.log(`  ${group}: ${endpoints.length} endpoint(s)`);
-    const skillDir = path.join(SKILLS_DIR, group);
+    const skillDir = path.join(SKILLS_DIR, `mercury-${group}`);
 
     // Ensure directory exists
     if (!fs.existsSync(skillDir)) {
@@ -324,13 +324,13 @@ function main() {
   }
 
   // Clean up stale skill directories no longer generated
-  const generatedGroups = new Set(groups.keys());
+  const generatedGroupDirs = new Set([...groups.keys()].map(g => `mercury-${g}`));
   const existingDirs = fs.readdirSync(SKILLS_DIR, { withFileTypes: true })
-    .filter(d => d.isDirectory())
+    .filter(d => d.isDirectory() && d.name.startsWith('mercury-'))
     .map(d => d.name);
 
   for (const dirName of existingDirs) {
-    if (generatedGroups.has(dirName)) continue;
+    if (generatedGroupDirs.has(dirName)) continue;
 
     const dirPath = path.join(SKILLS_DIR, dirName);
     const hasGenerated = fs.existsSync(path.join(dirPath, '_generated.md'));

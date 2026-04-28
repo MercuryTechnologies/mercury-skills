@@ -1383,6 +1383,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Dollar'
           - description: ' The amount of payments made against the accrual source.'
+        displayStatus:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceDisplayStatus'
+          - description: ' The display status of the accrual source'
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
@@ -1409,11 +1413,6 @@ components:
           - description: ' The gross amount of the accrual source. Total of all lines.'
         id:
           description: ' The ID of the accrual source'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
-          type: string
-        instanceId:
-          description: ' The ID of the instance'
           example: 7JRNsKwy2Lw66caxVU7WGC
           format: base58 (max length 22)
           type: string
@@ -1444,15 +1443,24 @@ components:
           type: string
       required:
       - id
-      - instanceId
       - referenceNumber
       - type
       - status
+      - displayStatus
       - effectiveDate
       - grossAmount
       - amountPaid
       - amountOutstanding
       type: object
+    BooksAccrualSourceDisplayStatus:
+      enum:
+      - open
+      - paid
+      - draft
+      - cancelled
+      - overdue
+      - partiallyPaid
+      type: string
     BooksAccrualSourceFile:
       description: ' A file associated with an accrual source'
       properties:
@@ -1599,6 +1607,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Dollar'
           - description: ' The amount of payments made against the accrual source.'
+        displayStatus:
+          allOf:
+          - $ref: '#/components/schemas/BooksAccrualSourceDisplayStatus'
+          - description: ' The display status of the accrual source'
         dueDate:
           allOf:
           - $ref: '#/components/schemas/Day'
@@ -1630,14 +1642,13 @@ components:
           - $ref: '#/components/schemas/Dollar'
           - description: ' The gross amount of the accrual source. Total of all lines.'
         id:
-          description: ' The ID of the accrual source'
+          description: |2-
+             The ID of the accrual source. Missing when the accrual source has
+             not yet been created in Teal — i.e. when the synchronous Teal sync
+             failed and was deferred to an async workflow. Signal that the accrual source is pending sync.
           example: 7JRNsKwy2Lw66caxVU7WGC
           format: base58 (max length 22)
-          type: string
-        instanceId:
-          description: ' The ID of the instance'
-          example: 7JRNsKwy2Lw66caxVU7WGC
-          format: base58 (max length 22)
+          nullable: true
           type: string
         journalEntryIds:
           description: ' The journal entry IDs generated from the accrual source.'
@@ -1679,11 +1690,10 @@ components:
           - payroll
           type: string
       required:
-      - id
-      - instanceId
       - referenceNumber
       - type
       - status
+      - displayStatus
       - effectiveDate
       - grossAmount
       - amountPaid
@@ -1696,6 +1706,15 @@ components:
       - paid
       - draft
       - cancelled
+      type: string
+    BooksCategorizerType:
+      enum:
+      - aI
+      - rules
+      - similarity
+      - transferBetweenAccounts
+      - uncategorized
+      - user
       type: string
     BooksChartOfAccountsTemplate:
       description: ' A chart of accounts template'
@@ -2013,15 +2032,17 @@ components:
           format: base58 (max length 22)
           nullable: true
           type: string
-        tagIds:
-          description: ' The IDs of the tags associated with the line entry, if any'
+        tags:
+          description: ' The tags associated with the line entry, if any.'
           items:
-            description: unique id for a tag
-            example: 7JRNsKwy2Lw66caxVU7WGC
-            format: base58 (max length 22)
-            type: string
+            $ref: '#/components/schemas/BooksTag'
           nullable: true
           type: array
+        transaction:
+          allOf:
+          - $ref: '#/components/schemas/BooksTransaction'
+          - description: ' Expandable. The associated Transaction object, if one exists.'
+          nullable: true
         transactionId:
           description: ' The ID of the associated Transaction, if one exists.'
           nullable: true
@@ -2151,6 +2172,277 @@ components:
       - debitAccountId
       - creditAccountId
       type: object
+    BooksTag:
+      description: ' A tag used for categorizing transactions in Books.'
+      properties:
+        id:
+          description: ' Unique identifier for the tag.'
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+        name:
+          description: ' Display name of the tag.'
+          type: string
+        tagGroupId:
+          description: unique id for a tag group
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          type: string
+      required:
+      - id
+      - name
+      - tagGroupId
+      type: object
+    BooksTransaction:
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Dollar'
+        attachments:
+          description: ' Attachments associated with the transaction from Mercury
+            Banking, if any.'
+          items:
+            $ref: '#/components/schemas/BooksTransactionAttachment'
+          nullable: true
+          type: array
+        categorizationMethod:
+          allOf:
+          - $ref: '#/components/schemas/BooksCategorizerType'
+          nullable: true
+        counterpartyName:
+          description: ' The name of the transaction counterparty (To/From), if available.'
+          nullable: true
+          type: string
+        customCategoryId:
+          nullable: true
+          type: string
+        customCategoryName:
+          description: ' The display name of the Banking custom category assigned
+            to this transaction, if any.'
+          nullable: true
+          type: string
+        datetime:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+        description:
+          format: size < 513
+          type: string
+        externalMetadataId:
+          nullable: true
+          type: string
+        id:
+          description: unique id for a transaction
+          type: string
+        journalEntryId:
+          description: unique id for a journal entry
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        ledgerId:
+          description: unique id for a ledger
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        lineEntryId:
+          description: unique id for a line entry
+          example: 7JRNsKwy2Lw66caxVU7WGC
+          format: base58 (max length 22)
+          nullable: true
+          type: string
+        merchantCategoryCode:
+          description: ' The merchant category code (MCC) for the transaction, if
+            available.'
+          nullable: true
+          type: string
+        note:
+          description: ' A note on the transaction set in Mercury Banking, if any.'
+          nullable: true
+          type: string
+        opposingLineEntryIds:
+          items:
+            description: unique id for a line entry
+            example: 7JRNsKwy2Lw66caxVU7WGC
+            format: base58 (max length 22)
+            type: string
+          nullable: true
+          type: array
+        personal:
+          type: boolean
+        postedStatus:
+          allOf:
+          - $ref: '#/components/schemas/BooksTransactionPostedStatus'
+        reviewStatus:
+          allOf:
+          - $ref: '#/components/schemas/BooksTransactionReviewStatus'
+        sourceAccountId:
+          type: string
+        teamMemberId:
+          nullable: true
+          type: string
+        teamMemberName:
+          description: ' The full name of the team member associated with this transaction,
+            if any.'
+          nullable: true
+          type: string
+      required:
+      - id
+      - amount
+      - datetime
+      - description
+      - postedStatus
+      - reviewStatus
+      - sourceAccountId
+      - personal
+      type: object
+    BooksTransactionAttachment:
+      description: ' An attachment on a Mercury transaction, including its ID, filename,
+        and a signed download URL.'
+      properties:
+        downloadUrl:
+          description: ' A presigned URL for downloading the attachment (valid for
+            1 hour).'
+          type: string
+        fileName:
+          description: ' The filename of the attachment.'
+          type: string
+        id:
+          description: ' The unique identifier of the attachment.'
+          type: string
+      required:
+      - id
+      - fileName
+      - downloadUrl
+      type: object
+    BooksTransactionPostedStatus:
+      enum:
+      - notPosted
+      - posted
+      - deleted
+      type: string
+    BooksTransactionReviewStatus:
+      enum:
+      - reviewed
+      - unreviewed
+      type: string
+    Card:
+      description: ' Card domain object'
+      properties:
+        accountId:
+          description: ' The Mercury account this card is associated with.'
+          type: string
+        createdAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Timestamp when the card was issued.'
+        expiration:
+          allOf:
+          - $ref: '#/components/schemas/CardExpiration'
+          - description: ' Month and year the card expires.'
+        id:
+          description: ' Unique identifier for the card.'
+          format: uuid
+          type: string
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/CardKind'
+          - description: ' Whether the card is a debit or credit card.'
+        lastFour:
+          description: ' Last four digits of the card''s primary account number (PAN).'
+          type: string
+        nameOnCard:
+          description: ' Cardholder name printed on the card.'
+          type: string
+        nickname:
+          description: ' Optional user-assigned label for the card.'
+          nullable: true
+          type: string
+        physicalCardStatus:
+          allOf:
+          - $ref: '#/components/schemas/PhysicalCardStatus'
+          - description: ' Activation state of a physical card. Null for virtual cards.'
+          nullable: true
+        spendLimit:
+          allOf:
+          - $ref: '#/components/schemas/SpendLimit'
+          - description: ' Spending controls applied to this card.'
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CardStatus'
+          - description: ' Current lifecycle state of the card.'
+        type:
+          allOf:
+          - $ref: '#/components/schemas/CardType'
+          - description: ' Whether the card is virtual (digital-only) or physical
+              (printed, supports ATM).'
+        updatedAt:
+          allOf:
+          - $ref: '#/components/schemas/UTCTime'
+          - description: ' Timestamp of the last modification to the card or its settings.'
+        userId:
+          description: ' Mercury User who owns the card.'
+          type: string
+      required:
+      - id
+      - accountId
+      - createdAt
+      - updatedAt
+      - lastFour
+      - nameOnCard
+      - userId
+      - status
+      - type
+      - kind
+      - expiration
+      type: object
+    CardExpiration:
+      description: ' Month and year the card expires.'
+      properties:
+        month:
+          description: ' Calendar month, 1-12 (e.g. 8).'
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          type: integer
+        year:
+          description: ' Four-digit calendar year (e.g. 2026).'
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          type: integer
+      required:
+      - month
+      - year
+      type: object
+    CardKind:
+      enum:
+      - debit
+      - credit
+      type: string
+    CardListResponse:
+      description: ' Paginated response containing a list of cards.'
+      properties:
+        cards:
+          description: ' List of cards in the current page.'
+          items:
+            $ref: '#/components/schemas/Card'
+          type: array
+        page:
+          description: ' Pagination cursors for navigating to next/previous pages.'
+          properties:
+            nextPage:
+              description: Unique identifier for a card
+              format: uuid
+              type: string
+            previousPage:
+              description: Unique identifier for a card
+              format: uuid
+              type: string
+          type: object
+      required:
+      - cards
+      - page
+      type: object
     CardNetwork:
       enum:
       - visa
@@ -2164,6 +2456,11 @@ components:
       - inactive
       - expired
       - suspended
+      type: string
+    CardType:
+      enum:
+      - virtual
+      - physical
       type: string
     CategoriesPaginatedResponse:
       description: |2-
@@ -2198,13 +2495,29 @@ components:
         name:
           description: ' The name of the category'
           type: string
+        visibleForCardSpend:
+          description: ' Whether this category is applicable to card transactions'
+          type: boolean
+        visibleForOther:
+          description: ' Whether this category is applicable to all other transaction
+            kinds'
+          type: boolean
+        visibleForReimbursements:
+          description: ' Whether this category is applicable to expense reimbursement
+            transactions'
+          type: boolean
       required:
       - id
       - name
+      - visibleForReimbursements
+      - visibleForCardSpend
+      - visibleForOther
       type: object
     CategoryId:
       description: ID for the category
       format: uuid
+      type: string
+    CategoryName:
       type: string
     CheckInfo:
       properties:
@@ -2347,6 +2660,66 @@ components:
       - editable
       - reportCashFlow
       - financialAccountType
+      type: object
+    CreateCardRequest:
+      description: ' Request body for creating a card'
+      properties:
+        accountId:
+          description: ' The deposit account the new card will draw funds from.'
+          type: string
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/CardKind'
+          - description: ' Whether to issue a debit or credit card.'
+        nickname:
+          description: ' Optional user-assigned label for the card.'
+          nullable: true
+          type: string
+        spendLimit:
+          allOf:
+          - $ref: '#/components/schemas/SpendLimit'
+          - description: ' Spending controls to apply at issuance.'
+          nullable: true
+        type:
+          allOf:
+          - $ref: '#/components/schemas/CreateCardType'
+          - description: ' The type of card to issue.'
+        userId:
+          description: ' The user to assign as the cardholder.'
+          type: string
+      required:
+      - accountId
+      - userId
+      - type
+      - kind
+      type: object
+    CreateCardType:
+      enum:
+      - virtual
+      type: string
+    CreateCategoryApiRequest:
+      description: ' Request body for creating a new expense category'
+      properties:
+        name:
+          allOf:
+          - $ref: '#/components/schemas/CategoryName'
+          - description: ' Name of the category'
+        visibleForCardSpend:
+          description: ' Whether this category is applicable to card transactions'
+          type: boolean
+        visibleForOther:
+          description: ' Whether this category is applicable to all other transaction
+            kinds'
+          type: boolean
+        visibleForReimbursements:
+          description: ' Whether this category is applicable to expense reimbursement
+            transactions'
+          type: boolean
+      required:
+      - name
+      - visibleForReimbursements
+      - visibleForCardSpend
+      - visibleForOther
       type: object
     CreateWebhookParams:
       description: ' Request body for creating a new webhook endpoint'
@@ -2606,6 +2979,30 @@ components:
       - routingNumber
       - address
       type: object
+    EditCategoryApiRequest:
+      description: ' Request body for editing an existing expense category. All fields
+        are optional.'
+      properties:
+        name:
+          allOf:
+          - $ref: '#/components/schemas/CategoryName'
+          - description: ' New name for the category'
+          nullable: true
+        visibleForCardSpend:
+          description: ' Whether this category is applicable to card transactions'
+          nullable: true
+          type: boolean
+        visibleForOther:
+          description: ' Whether this category is applicable to all other transaction
+            kinds'
+          nullable: true
+          type: boolean
+        visibleForReimbursements:
+          description: ' Whether this category is applicable to expense reimbursement
+            transactions'
+          nullable: true
+          type: boolean
+      type: object
     EditRecipientRequest:
       properties:
         address:
@@ -2753,6 +3150,27 @@ components:
           - description: ' The requested journal entry'
       required:
       - journalEntry
+      type: object
+    GlAllocation:
+      description: |2-
+         A GL code allocation on a transaction — a GL code name paired with the amount
+         allocated to it. When a transaction is fully categorized, the amounts across all
+         allocations sum to the transaction total.
+      properties:
+        amount:
+          description: ' The amount allocated to this GL code'
+          multipleOf: 1.0e-2
+          type: number
+        description:
+          description: ' Optional user-provided description for this allocation'
+          nullable: true
+          type: string
+        glCodeName:
+          description: ' The name of the GL code from the connected accounting integration'
+          type: string
+      required:
+      - glCodeName
+      - amount
       type: object
     ISO3166Alpha2:
       type: string
@@ -3176,7 +3594,7 @@ components:
       enum:
       - inactive
       - active
-      - paused
+      - locked
       type: string
     PositiveDollar:
       description: A positive dollar amount with at least 1 cent.
@@ -3555,6 +3973,10 @@ components:
       - paymentMethod
       - idempotencyKey
       type: object
+    SendMoneyApprovalRequestId:
+      description: ID for the send money approval request
+      format: uuid
+      type: string
     SendMoneyApprovalRequestResponse:
       description: ' Extremely close to the internal type, but strips out potentially
         unwanted fields'
@@ -3587,6 +4009,23 @@ components:
       - amount
       - status
       type: object
+    SendMoneyApprovalRequestsPaginatedResponse:
+      properties:
+        page:
+          properties:
+            nextPage:
+              $ref: '#/components/schemas/SendMoneyApprovalRequestId'
+            previousPage:
+              $ref: '#/components/schemas/SendMoneyApprovalRequestId'
+          type: object
+        requests:
+          items:
+            $ref: '#/components/schemas/SendMoneyApprovalRequestResponse'
+          type: array
+      required:
+      - requests
+      - page
+      type: object
     SimplePurpose:
       properties:
         additionalInfo:
@@ -3618,6 +4057,33 @@ components:
       description: Pagination cursor for retrieving next batch of transactions
       minimum: 0
       type: integer
+    SpendLimit:
+      description: ' Spending controls applied to a card'
+      properties:
+        amountCents:
+          description: ' Maximum total spend allowed per interval, in cents.'
+          minimum: 0
+          type: integer
+        atmAmountCents:
+          description: ' Maximum ATM withdrawal allowed per interval, in cents. Null
+            for virtual cards.'
+          minimum: 0
+          nullable: true
+          type: integer
+        interval:
+          allOf:
+          - $ref: '#/components/schemas/SpendLimitInterval'
+          - description: ' Rolling window the limit applies to.'
+      required:
+      - amountCents
+      - interval
+      type: object
+    SpendLimitInterval:
+      enum:
+      - daily
+      - weekly
+      - monthly
+      type: string
     SwiftBankAccountType:
       enum:
       - checking
@@ -3712,13 +4178,20 @@ components:
           nullable: true
         generalLedgerCodeName:
           description: |2-
-             The name of the General Ledger (GL) code assigned to this transaction for accounting
-             categorization. GL codes act as "bins" that organize transactions into accounting categories.
-             This field is present when the transaction has been categorized, either manually by a user,
-             via an accounting integration sync, or through auto-categorization rules. Nothing if the
-             transaction has not been assigned a GL code.
+             Deprecated: use transactionGlAllocations instead. This field does not reflect GL codes
+             assigned via Mercury auto-categorization rules. Preserved for backwards compatibility.
           nullable: true
           type: string
+        glAllocations:
+          description: |2-
+             GL code allocations assigned to this transaction via a connected accounting software
+             integration (e.g. QuickBooks, Xero, NetSuite). Each allocation has a GL code name and
+             the amount allocated to it; amounts sum to the transaction total when the transaction is
+             fully categorized. Empty if no GL codes have been assigned. Distinct from Mercury custom
+             categories (see transactionCategoryData).
+          items:
+            $ref: '#/components/schemas/GlAllocation'
+          type: array
         hasGeneratedReceipt:
           type: boolean
         id:
@@ -3774,6 +4247,7 @@ components:
       - kind
       - compliantWithReceiptPolicy
       - hasGeneratedReceipt
+      - glAllocations
       - attachments
       - relatedTransactions
       - accountId
@@ -4372,6 +4846,19 @@ components:
           nullable: true
           type: string
       type: object
+    UpdateCardRequest:
+      description: ' Request body for updating a card'
+      properties:
+        nickname:
+          description: ' Updated user-assigned label for the card.'
+          nullable: true
+          type: string
+        spendLimit:
+          allOf:
+          - $ref: '#/components/schemas/SpendLimit'
+          - description: ' Updated spending controls for the card.'
+          nullable: true
+      type: object
     UpdateWebhookParams:
       description: |2-
          Request body for updating an existing webhook endpoint.
@@ -4490,17 +4977,6 @@ components:
       - paused
       type: string
   securitySchemes:
-    basicAuth:
-      description: |
-        Basic authentication for Mercury API.
-
-        Use your API token as the username with an empty password.
-
-        Example:
-        Username: `secret-token:mercury_production_wma_24SCp4G81X3yHL4Wq8FgzuaP9ye3VKf2mgTDctXyRg5HY_yrucrem`
-        Password: (empty)
-      scheme: basic
-      type: http
     bearerAuth:
       description: |
         Bearer token authentication for Mercury API.
@@ -5845,6 +6321,271 @@ paths:
       tags:
       - Books
       x-internal: true
+  /cards:
+    get:
+      description: Retrieve a paginated list of cards.
+      operationId: listCards
+      parameters:
+      - in: query
+        name: accountId
+        required: false
+        schema:
+          description: Filter cards by one or more account IDs.
+          items:
+            type: string
+          type: array
+      - in: query
+        name: status
+        required: false
+        schema:
+          description: Filter cards by one or more statuses.
+          items:
+            enum:
+            - active
+            - frozen
+            - cancelled
+            - inactive
+            - expired
+            - suspended
+            type: string
+          type: array
+      - in: query
+        name: type
+        required: false
+        schema:
+          description: Filter cards by type (virtual or physical).
+          items:
+            enum:
+            - virtual
+            - physical
+            type: string
+          type: array
+      - in: query
+        name: kind
+        required: false
+        schema:
+          description: Filter cards by kind (debit or credit).
+          items:
+            enum:
+            - debit
+            - credit
+            type: string
+          type: array
+      - in: query
+        name: userId
+        required: false
+        schema:
+          description: Filter cards by one or more cardholder user IDs.
+          items:
+            type: string
+          type: array
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 500
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 500'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      - in: query
+        name: order
+        required: false
+        schema:
+          default: asc
+          description: Sort order. Can be 'asc' or 'desc'. Defaults to 'asc'
+          enum:
+          - asc
+          - desc
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the card to start the page after (exclusive). When
+            provided, results will begin with the card immediately following this
+            ID. Use this for standard forward pagination to get the next page of results.
+            Cannot be combined with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the card to end the page before (exclusive). When
+            provided, results will end just before this ID and work backwards. Use
+            this for reverse pagination or to retrieve previous pages. Cannot be combined
+            with start_after.
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardListResponse'
+          description: ''
+        '400':
+          description: Invalid `end_before` or `start_after` or `order` or `limit`
+            or `userId` or `kind` or `type` or `status` or `accountId`
+      summary: List cards
+      tags:
+      - Cards
+      x-internal: true
+    post:
+      description: Issue a new virtual card.
+      operationId: createCard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '400':
+          description: Invalid `body`
+      summary: Create a card
+      tags:
+      - Cards
+      x-internal: true
+  /cards/{cardId}:
+    get:
+      description: Retrieve details of a specific card by its ID.
+      operationId: getCard
+      parameters:
+      - in: path
+        name: cardId
+        required: true
+        schema:
+          description: Unique identifier for a card
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '404':
+          description: '`cardId` not found'
+      summary: Get a card
+      tags:
+      - Cards
+      x-internal: true
+    post:
+      description: Update a card's nickname or spending limits.
+      operationId: updateCard
+      parameters:
+      - in: path
+        name: cardId
+        required: true
+        schema:
+          description: Unique identifier for a card
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCardRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '400':
+          description: Invalid `body`
+        '404':
+          description: '`cardId` not found'
+      summary: Update a card
+      tags:
+      - Cards
+      x-internal: true
+  /cards/{cardId}/cancel:
+    post:
+      description: Permanently cancel a card. This action cannot be undone.
+      operationId: cancelCard
+      parameters:
+      - in: path
+        name: cardId
+        required: true
+        schema:
+          description: Unique identifier for a card
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '404':
+          description: '`cardId` not found'
+      summary: Cancel a card
+      tags:
+      - Cards
+      x-internal: true
+  /cards/{cardId}/freeze:
+    post:
+      description: Temporarily freeze a card. The card must be active.
+      operationId: freezeCard
+      parameters:
+      - in: path
+        name: cardId
+        required: true
+        schema:
+          description: Unique identifier for a card
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '404':
+          description: '`cardId` not found'
+      summary: Freeze a card
+      tags:
+      - Cards
+      x-internal: true
+  /cards/{cardId}/unfreeze:
+    post:
+      description: Unfreeze a previously frozen card, restoring it to active status.
+      operationId: unfreezeCard
+      parameters:
+      - in: path
+        name: cardId
+        required: true
+        schema:
+          description: Unique identifier for a card
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+          description: ''
+        '404':
+          description: '`cardId` not found'
+      summary: Unfreeze a card
+      tags:
+      - Cards
+      x-internal: true
   /categories:
     get:
       description: Retrieve a paginated list of all available custom expense categories
@@ -5903,6 +6644,58 @@ paths:
         '400':
           description: Invalid `end_before` or `start_after` or `order` or `limit`
       summary: List all categories
+      tags:
+      - Categories
+  /categories/create:
+    post:
+      description: Create a new custom expense category for the organization.
+      operationId: createCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryApiRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryData'
+          description: ''
+        '400':
+          description: Invalid `body`
+      summary: Create a new category
+      tags:
+      - Categories
+  /categories/{expenseCategoryId}/edit:
+    post:
+      description: Update an existing custom expense category for the organization.
+      operationId: editCategory
+      parameters:
+      - in: path
+        name: expenseCategoryId
+        required: true
+        schema:
+          description: ID for the category
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditCategoryApiRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryData'
+          description: ''
+        '400':
+          description: Invalid `body`
+        '404':
+          description: '`expenseCategoryId` not found'
+      summary: Edit a category
       tags:
       - Categories
   /credit:
@@ -6272,6 +7065,74 @@ paths:
       summary: List all recipient attachments
       tags:
       - Recipients
+  /request-send-money:
+    get:
+      description: Retrieve a paginated list of send money approval requests for the
+        authenticated organization. Supports filtering by account and status.
+      operationId: listSendMoneyApprovalRequests
+      parameters:
+      - in: query
+        name: accountId
+        required: false
+        schema:
+          description: ID for a Mercury account.
+          format: uuid
+          type: string
+      - in: query
+        name: status
+        required: false
+        schema:
+          enum:
+          - pendingApproval
+          - approved
+          - rejected
+          - cancelled
+          type: string
+      - in: query
+        name: start_after
+        required: false
+        schema:
+          description: The ID of the send money approval request to start the page
+            after (exclusive). When provided, results will begin with the send money
+            approval request immediately following this ID. Use this for standard
+            forward pagination to get the next page of results. Cannot be combined
+            with end_before.
+          format: uuid
+          type: string
+      - in: query
+        name: end_before
+        required: false
+        schema:
+          description: The ID of the send money approval request to end the page before
+            (exclusive). When provided, results will end just before this ID and work
+            backwards. Use this for reverse pagination or to retrieve previous pages.
+            Cannot be combined with start_after.
+          format: uuid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 1000
+          description: 'Maximum number of results to return. Allowed range: 1 to 1000.
+            Defaults to 1000'
+          format: int64
+          maximum: 1000
+          minimum: 1
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMoneyApprovalRequestsPaginatedResponse'
+          description: ''
+        '400':
+          description: Invalid `limit` or `end_before` or `start_after` or `status`
+            or `accountId`
+      summary: List send money approval requests
+      tags:
+      - Send Money
   /request-send-money/{requestId}:
     get:
       operationId: getSendMoneyApprovalRequest
@@ -6544,7 +7405,7 @@ paths:
         name: end
         required: false
         schema:
-          description: 'Latest createdAt date to filter for. If it''s not provided,
+          description: 'Latest createdAt date to filter for. If it’s not provided,
             it defaults to current day. Format: YYYY-MM-DD or an ISO 8601 string.
             Please note that your Mercury transactions on your Dashboard might have
             their postedAt date displayed, as opposed to createdAt'
@@ -7157,7 +8018,6 @@ paths:
       - Webhooks
 security:
 - bearerAuth: []
-- basicAuth: []
 servers:
 - description: Mercury API URL
   url: https://api.mercury.com/api/v1
@@ -7194,4 +8054,7 @@ tags:
   name: SAFEs
 - description: Manage organization books
   name: Books
+  x-internal: true
+- description: Manage cards
+  name: Cards
   x-internal: true

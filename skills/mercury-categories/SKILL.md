@@ -1,11 +1,12 @@
 ---
 name: mercury-categories
-description: "Mercury categories API operations: list all categories."
+description: "Mercury categories API operations: list all categories, create a new category, edit a category."
 metadata:
   version: 1.0.0
   category: service
   scopes:
     - categories:read
+    - categories:write
   requires:
     - mercury-shared
   channels:
@@ -13,6 +14,8 @@ metadata:
     - cli
   api_resources:
     - listCategories
+    - createCategory
+    - editCategory
   mcp_tools:
     - listCategories
 ---
@@ -39,4 +42,46 @@ metadata:
 ### Response (200)
 
 Schema: `CategoriesPaginatedResponse`
+
+---
+
+## POST /categories/create
+
+**Operation:** `createCategory`
+**Summary:** Create a new category
+**Description:** Create a new custom expense category for the organization.
+
+### Parameters
+
+No parameters required.
+
+### Request Body
+
+Schema: `CreateCategoryApiRequest`
+
+### Response (200)
+
+Schema: `CategoryData`
+
+---
+
+## POST /categories/{expenseCategoryId}/edit
+
+**Operation:** `editCategory`
+**Summary:** Edit a category
+**Description:** Update an existing custom expense category for the organization.
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|------|------|----------|-------------|
+| `expenseCategoryId` | path | string (uuid) | Yes | ID for the category |
+
+### Request Body
+
+Schema: `EditCategoryApiRequest`
+
+### Response (200)
+
+Schema: `CategoryData`
 

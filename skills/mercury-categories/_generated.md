@@ -20,3 +20,45 @@
 ### Response (200)
 
 Schema: `CategoriesPaginatedResponse`
+
+---
+
+## POST /categories/create
+
+**Operation:** `createCategory`
+**Summary:** Create a new category
+**Description:** Create a new custom expense category for the organization.
+
+### Parameters
+
+No parameters required.
+
+### Request Body
+
+Schema: `CreateCategoryApiRequest`
+
+### Response (200)
+
+Schema: `CategoryData`
+
+---
+
+## POST /categories/{expenseCategoryId}/edit
+
+**Operation:** `editCategory`
+**Summary:** Edit a category
+**Description:** Update an existing custom expense category for the organization.
+
+### Parameters
+
+| Name | In | Type | Required | Description |
+|------|------|------|----------|-------------|
+| `expenseCategoryId` | path | string (uuid) | Yes | ID for the category |
+
+### Request Body
+
+Schema: `EditCategoryApiRequest`
+
+### Response (200)
+
+Schema: `CategoryData`

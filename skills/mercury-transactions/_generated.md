@@ -78,7 +78,7 @@ Schema: No content
 | `status` | query | array[pending | sent | cancelled | failed | reversed | blocked] | No | - |
 | `search` | query | string | No | Search term to look for in transaction descriptions. |
 | `start` | query | string | No | Earliest createdAt date to filter for. If not provided, it defaults to the date of your first transaction. Format: YYYY-MM-DD or an ISO 8601 string. Please note that your Mercury transactions on your Dashboard might have their postedAt date displayed, as opposed to createdAt |
-| `end` | query | string | No | Latest createdAt date to filter for. If it's not provided, it defaults to current day. Format: YYYY-MM-DD or an ISO 8601 string. Please note that your Mercury transactions on your Dashboard might have their postedAt date displayed, as opposed to createdAt |
+| `end` | query | string | No | Latest createdAt date to filter for. If it’s not provided, it defaults to current day. Format: YYYY-MM-DD or an ISO 8601 string. Please note that your Mercury transactions on your Dashboard might have their postedAt date displayed, as opposed to createdAt |
 | `postedStart` | query | string | No | Earliest postedAt date to filter for. Format: YYYY-MM-DD or an ISO 8601 string |
 | `postedEnd` | query | string | No | Latest postedAt date to filter for. Format: YYYY-MM-DD or an ISO 8601 string |
 | `accountId` | query | array[string] | No | - |

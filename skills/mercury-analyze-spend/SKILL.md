@@ -1,18 +1,16 @@
 ---
 name: mercury-analyze-spend
-description: "Analyze spending patterns across accounts with parallel queries and categorized breakdowns."
+description: "Analyze spending patterns across Mercury accounts using the mercury CLI, with categorized breakdowns and month-over-month comparisons."
 metadata:
   version: "1.0.0"
   category: agentic
   scopes: [accounts:read, transactions:read]
-  requires: [mercury-shared, mercury-accounts, mercury-transactions]
-  channels: [mcp, cli]
-  mcp_tools: [getAccounts, listTransactions]
+  requires: [mercury-shared]
 ---
 
 # Mercury Analyze Spend
 
-Analyze spending patterns across Mercury accounts with categorized breakdowns, counterparty grouping, and month-over-month comparisons. This skill orchestrates parallel queries across multiple accounts and aggregates results into a structured spend report.
+Analyze spending patterns across Mercury accounts with categorized breakdowns, counterparty grouping, and month-over-month comparisons. This skill orchestrates `mercury` CLI queries and aggregates the results into a structured spend report.
 
 ## Parameters
 
@@ -26,97 +24,74 @@ Analyze spending patterns across Mercury accounts with categorized breakdowns, c
 
 ### Step 1: Determine Scope
 
-Get all account IDs and calculate the date range for the analysis.
-
 ```
-1. Call getCurrentDate to get today's date
-2. Call getAccounts to retrieve all active accounts
-3. Apply accountFilter if provided, otherwise use all active accounts
-4. Calculate date range:
-   - IF user specified a date range: use it
-   - ELSE: start = today - 30 days, end = today
-5. Store: accountIds[], startDate, endDate
+1. Run `date +%Y-%m-%d` to get today's date.
+2. Run `mercury accounts list --max-items -1 --format jsonl` to get all accounts.
+3. Apply accountFilter if provided, otherwise use every active account.
+4. Calculate the date range:
+   - IF user specified a range: use it.
+   - ELSE: start = today - 30 days, end = today.
+5. Store: accountIds[], startDate, endDate.
 ```
 
-### Step 2: Parallel Data Fetch
+### Step 2: Fetch Transactions
 
-Retrieve transactions across accounts using batched parallel queries.
+`mercury transactions list` accepts repeated `--account-id` flags and `--max-items -1` to paginate fully.
 
 ```
-Given: accountIds[], startDate, endDate
-
-IF len(accountIds) <= 3:
-    # Query all accounts in parallel
-    FOR EACH accountId IN accountIds (parallel):
-        listTransactions(accountId, start=startDate, end=endDate, limit=300)
-
-IF len(accountIds) > 3:
-    # Batch into groups of 3
-    batches = chunk(accountIds, 3)
-    FOR EACH batch IN batches (sequential):
-        FOR EACH accountId IN batch (parallel):
-            listTransactions(accountId, start=startDate, end=endDate, limit=300)
-
-# Handle large result sets
-IF total transactions across all responses > 2000:
-    # Reduce to 7-day windows and re-fetch
-    windows = splitDateRange(startDate, endDate, windowSize=7)
-    FOR EACH window IN windows:
-        Re-fetch using window.start, window.end with same batching logic
-
-# Paginate each response per mercury-shared rules
-FOR EACH response:
-    IF hasMorePages: paginate until complete
-    IF truncated: reduce limit by 50% and retry
+mercury transactions list \
+  --account-id <id1> [--account-id <id2> ...] \
+  --start <startDate> \
+  --end <endDate> \
+  --status sent \
+  --max-items -1 \
+  --format jsonl
 ```
+
+- Use `--status sent` so pending transactions (whose final amount may shift) are excluded from the totals.
+- If the result set is very large (>2,000 rows), split the date range into 7-day windows and run one CLI call per window, then merge.
 
 ### Step 3: Analyze
 
-Group and compute spend metrics from the collected transactions.
+Operate on the merged JSON programmatically (Python or jq):
 
 ```
-allTransactions = merge(all fetched transactions)
+allTransactions = merge(all responses)
 
-# Filter to outgoing transactions only (debit / negative amounts)
+# Outgoing spend only -- Mercury debits are negative.
 spending = allTransactions.filter(t => t.amount < 0)
 
-# Apply categoryFilter if provided
 IF categoryFilter:
     spending = spending.filter(t => categoryFilter.includes(t.category))
 
-# Group by category + counterparty
+# Group by category, then by counterparty within each category.
 groups = {}
 FOR EACH txn IN spending:
     key = txn.category || "Uncategorized"
     groups[key].total += abs(txn.amount)
     groups[key].count += 1
-    groups[key].counterparties[txn.counterpartyName].total += abs(txn.amount)
-    groups[key].counterparties[txn.counterpartyName].count += 1
+    cp = txn.counterpartyName || "Unknown"
+    groups[key].counterparties[cp].total += abs(txn.amount)
+    groups[key].counterparties[cp].count += 1
 
-# Compute metrics per category
+# Per-category metrics.
 FOR EACH category IN groups:
     category.average = category.total / category.count
     category.percentOfSpend = category.total / totalSpend * 100
 
-# Sort by total amount descending
 sortedCategories = groups.sortBy(total, descending)
 
-# Month-over-month comparison (if date range spans multiple months)
+# Month-over-month if range spans >= 2 months.
 IF dateRange spans >= 2 months:
     FOR EACH category:
-        currentMonth = sum of transactions in most recent month
-        previousMonth = sum of transactions in prior month
+        currentMonth = sum(transactions in most recent month)
+        previousMonth = sum(transactions in prior month)
         category.monthOverMonthChange = ((currentMonth - previousMonth) / previousMonth) * 100
-
-# Flag significant increases
-FOR EACH category:
-    IF category.monthOverMonthChange > 20%:
-        category.flagged = true
+        IF category.monthOverMonthChange > 20%:
+            category.flagged = true
 ```
 
 ### Step 4: Present
-
-Format the analysis into a clear, structured report.
 
 ```
 1. Summary header:
@@ -127,21 +102,21 @@ Format the analysis into a clear, structured report.
 
 2. Top 10 categories by spend:
    | Rank | Category | Total | % of Spend | Avg Txn | Count |
-   Show top counterparty per category inline
+   Show top counterparty per category inline.
 
 3. Month-over-month comparison (if available):
    | Category | Prior Month | Current Month | Change % | Flag |
-   Highlight categories with >20% increase
+   Highlight categories with >20% increase.
 
 4. Flagged categories:
-   List any categories with >20% month-over-month increase
-   Include context: top counterparties driving the increase
+   List any category with >20% month-over-month increase.
+   Include the top counterparties driving the increase.
 ```
 
 ## Example Output
 
 ```
-Spend Analysis: Feb 4, 2026 - Mar 6, 2026
+Spend Analysis: Mar 30, 2026 - Apr 29, 2026
 Accounts: 2 | Transactions: 847 | Total Spend: $234,567.89
 
 Top 10 Categories:
@@ -153,7 +128,7 @@ Top 10 Categories:
  ...
 
 Month-over-Month:
- Category         Jan          Feb         Change
+ Category         Mar          Apr         Change
  Software         $24,100.00   $32,450.00  +34.6%  !!
  Cloud Services   $27,500.00   $28,900.00  +5.1%
 
@@ -163,8 +138,6 @@ Flagged: Software spending increased 34.6% -- driven by
 
 ## Tips
 
-- Always call `getCurrentDate` first before calculating any date ranges.
-- Handle pagination per mercury-shared rules -- never provide answers based on truncated or incomplete data.
-- Use programmatic computation (reduce, map, sort) for all financial calculations per mercury-shared computational requirements.
-- When accounts have high transaction volume, prefer narrower date windows over large single queries.
-- Debit transactions (outgoing spend) have negative amounts in the Mercury API.
+- For high-volume accounts, prefer narrower date windows over a single huge query — many small calls are cheaper than one truncated one.
+- Use `--transform` to pull only the fields used downstream (`{id,amount,counterpartyName,category,postedAt}`) — saves a lot of tokens on large windows.
+- Compute totals programmatically (reduce/map/sort); don't eyeball them.

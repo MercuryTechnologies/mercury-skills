@@ -1,79 +1,45 @@
 # Mercury Skills Directory
 
-A centralized source of truth for agent-readable instructions that guide Mercury API consumption across multiple channels (MCP server, CLI, SDKs).
-
-Skills follow the [Agent Skills](https://github.com/agentskills/agentskills) open format ([spec](https://agentskills.io/specification)).
+Agent skills that drive the Mercury CLI. Each skill is a self-contained `SKILL.md` following the [Agent Skills](https://github.com/agentskills/agentskills) format ([spec](https://agentskills.io/specification)).
 
 ## Structure
 
 ```
 skills/
-  mercury-shared/SKILL.md        # Auth, security, pagination, date handling
-  mercury-accounts/               # Service skill (hybrid: generated + enriched)
-    _generated.md                 # Auto-generated from OpenAPI (overwritten)
-    _enrichments.md               # Manual behavioral guidance (preserved)
-    SKILL.md                      # Final merged output
-  mercury-transactions/           # Same pattern for each service...
-  mercury-analyze-spend/SKILL.md  # Agentic skill (manual)
-  mercury-detect-anomaly/SKILL.md # Agentic skill (manual)
-  ...
+  mercury-shared/SKILL.md                       # Auth, security, pagination, date handling
+  mercury-analyze-spend/SKILL.md                # Categorized spend report
+  mercury-detect-anomaly/SKILL.md               # Baseline + anomaly scoring
+  mercury-receipt-upload/SKILL.md               # Match a receipt image to a transaction and attach it
+  mercury-autocategorize-transactions/SKILL.md  # Suggest categories for uncategorized transactions
 ```
 
-Each skill directory name matches its `name` frontmatter field, per the Agent Skills spec. Non-spec fields (`category`, `scopes`, `requires`, `channels`) live under `metadata`.
+Each directory name matches the skill's `name` frontmatter field.
 
-## Skill Categories
+## Skills
 
-| Category | Source | Examples |
-|----------|--------|----------|
-| **Shared** | Manual | Auth, security rules, pagination, date handling |
-| **Service** | Hybrid (generated + enriched) | accounts, transactions, recipients |
-| **Helper** | Manual | balance-check, recent-activity, spending-summary |
-| **Workflow** | Manual | monthly-close, vendor-payment, cash-flow-analysis |
-| **Agentic** | Manual | analyze-spend, detect-anomaly |
+| Skill | Category | What it does |
+|-------|----------|--------------|
+| `mercury-shared` | shared | CLI usage rules, auth, dates, pagination, money formatting |
+| `mercury-analyze-spend` | agentic | Categorized breakdown + month-over-month for an account/date range |
+| `mercury-detect-anomaly` | agentic | Builds 90d baselines and flags pattern breaks in a recent window |
+| `mercury-receipt-upload` | agentic | Reads a receipt image, finds the matching transaction, attaches via CLI |
+| `mercury-autocategorize-transactions` | agentic | Suggests categories from counterparty/merchant-type history, applies via CLI |
 
-## Usage
-
-```bash
-# Install dependencies
-npm install
-
-# Generate service skills from OpenAPI spec
-npm run generate
-
-# Build MCP bundle (dist/skills-bundle.json)
-npm run build:mcp
-
-# Build CLI instructions (dist/cli-instructions.md)
-npm run build:cli
-
-# Run all steps
-npm run build
-```
-
-## Distribution
-
-- **MCP Server**: `dist/skills-bundle.json` replaces hardcoded `SERVER_INSTRUCTIONS` and `toolDescriptionExtras`
-- **CLI**: `dist/cli-instructions.md` consumed as `.claude/INSTRUCTIONS.md` in mercury-cli
+All four agentic skills depend on `mercury-shared` and use the `mercury` CLI (`../mercury-cli`) for every read and write.
 
 ## SKILL.md Format
 
-Each skill file uses YAML frontmatter + markdown body, following the [Agent Skills specification](https://agentskills.io/specification):
-
 ```yaml
 ---
-name: mercury-transactions
-description: "Query, filter, and manage transactions."
+name: mercury-analyze-spend
+description: "Analyze spending patterns across Mercury accounts."
 metadata:
   version: "1.0.0"
-  category: service
-  scopes: [transactions:read, transactions:write]
+  category: agentic
+  scopes: [accounts:read, transactions:read]
   requires: [mercury-shared]
-  channels: [mcp, cli]
-  mcp_tools: [listTransactions, getTransactionById]
 ---
 
-# Transactions
-
-## Usage
+# Mercury Analyze Spend
 ...
 ```

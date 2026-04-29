@@ -1,18 +1,16 @@
 ---
 name: mercury-detect-anomaly
-description: "Detect anomalous transactions by building spending baselines and flagging pattern breaks."
+description: "Detect anomalous transactions by building spending baselines from the mercury CLI and flagging pattern breaks."
 metadata:
   version: "1.0.0"
   category: agentic
   scopes: [accounts:read, transactions:read]
-  requires: [mercury-shared, mercury-accounts, mercury-transactions]
-  channels: [mcp, cli]
-  mcp_tools: [getAccounts, listTransactions]
+  requires: [mercury-shared]
 ---
 
 # Mercury Detect Anomaly
 
-Detect anomalous transactions by building historical spending baselines and flagging pattern breaks. This skill analyzes transaction history to compute per-counterparty and per-category norms, then scores recent transactions against those baselines using a weighted anomaly model.
+Detect anomalous transactions by building historical spending baselines and flagging pattern breaks. This skill pulls baseline and recent transactions via the `mercury` CLI, computes per-counterparty and per-category norms, and scores recent transactions against those baselines using a weighted anomaly model.
 
 ## Parameters
 
@@ -24,74 +22,60 @@ Detect anomalous transactions by building historical spending baselines and flag
 
 ## Execution Strategy
 
-### Step 1: Establish Baseline
-
-Query historical transaction data and compute per-counterparty and per-category baselines.
+### Step 1: Establish Date Windows
 
 ```
-1. Call getCurrentDate to get today's date
-2. Call getAccounts to retrieve all active accounts
-3. Calculate dates:
-   - baselineStart = today - baselinePeriod (default: 90 days)
-   - baselineEnd = today - analysisWindow (default: 7 days ago)
+1. Run `date +%Y-%m-%d` to get today's date.
+2. Run `mercury accounts list --max-items -1 --format jsonl` to get all accounts.
+3. Compute:
+   - baselineStart = today - baselinePeriod   (default: 90 days)
+   - baselineEnd   = today - analysisWindow   (default: 7 days ago)
    - analysisStart = today - analysisWindow
-   - analysisEnd = today
-4. Store: accountIds[], baselineStart, baselineEnd, analysisStart, analysisEnd
+   - analysisEnd   = today
 ```
 
-### Step 2: Parallel Data Fetch
+### Step 2: Fetch Transactions
 
-Retrieve both baseline and analysis window transactions using batched parallel queries.
+Run two separate `mercury transactions list` calls — one for the baseline window, one for the analysis window. Both can target every account by repeating `--account-id`, and both should use `--max-items -1` so pagination is complete.
 
 ```
-Given: accountIds[], baselineStart, baselineEnd, analysisStart, analysisEnd
+# Baseline window
+mercury transactions list \
+  --account-id <id1> [--account-id <id2> ...] \
+  --start <baselineStart> --end <baselineEnd> \
+  --status sent \
+  --max-items -1 --format jsonl
 
-# Fetch baseline transactions
-IF len(accountIds) <= 3:
-    FOR EACH accountId IN accountIds (parallel):
-        listTransactions(accountId, start=baselineStart, end=baselineEnd, limit=300)
-ELSE:
-    batches = chunk(accountIds, 3)
-    FOR EACH batch IN batches (sequential):
-        FOR EACH accountId IN batch (parallel):
-            listTransactions(accountId, start=baselineStart, end=baselineEnd, limit=300)
-
-# Handle large baselines
-IF total baseline transactions > 2000:
-    Re-fetch using 7-day windows with same batching logic
-
-# Fetch analysis window transactions (same batching pattern)
-FOR EACH accountId (parallel, batched by 3):
-    listTransactions(accountId, start=analysisStart, end=analysisEnd, limit=300)
-
-# Paginate all responses per mercury-shared rules
-FOR EACH response:
-    IF hasMorePages: paginate until complete
-    IF truncated: reduce limit by 50% and retry
+# Analysis window
+mercury transactions list \
+  --account-id <id1> [--account-id <id2> ...] \
+  --start <analysisStart> --end <analysisEnd> \
+  --status sent \
+  --max-items -1 --format jsonl
 ```
+
+If the baseline result is very large (>2,000 rows), split the baseline range into 7-day windows and run one call per window, then merge.
 
 ### Step 3: Score Anomalies
 
-Build baselines from historical data, then score each transaction in the analysis window.
-
 ```
-baselineTransactions = merge(all baseline responses)
-analysisTransactions = merge(all analysis window responses)
+baselineTransactions = merge(baseline responses)
+analysisTransactions = merge(analysis responses)
 
-# Build per-counterparty baseline
+# Per-counterparty baseline.
 counterpartyBaseline = {}
 FOR EACH txn IN baselineTransactions:
     cp = txn.counterpartyName
     counterpartyBaseline[cp].amounts.push(abs(txn.amount))
-    counterpartyBaseline[cp].dates.push(txn.date)
+    counterpartyBaseline[cp].dates.push(txn.createdAt || txn.postedAt)
     counterpartyBaseline[cp].count += 1
 
 FOR EACH cp IN counterpartyBaseline:
     cp.avgAmount = mean(cp.amounts)
-    cp.frequency = cp.count / baselinePeriodWeeks  # transactions per week
+    cp.frequency = cp.count / baselinePeriodWeeks   # transactions per week
     cp.typicalDays = mode(cp.dates.map(d => dayOfWeek(d)))
 
-# Build per-category baseline
+# Per-category baseline.
 categoryBaseline = {}
 FOR EACH txn IN baselineTransactions:
     cat = txn.category || "Uncategorized"
@@ -101,7 +85,7 @@ FOR EACH txn IN baselineTransactions:
 FOR EACH cat IN categoryBaseline:
     cat.avgAmount = mean(cat.amounts)
 
-# Score each transaction in the analysis window
+# Score each transaction in the analysis window.
 FOR EACH txn IN analysisTransactions:
     score = 0
     reasons = []
@@ -110,10 +94,9 @@ FOR EACH txn IN analysisTransactions:
     txnAmount = abs(txn.amount)
 
     # 1. Amount anomaly (weight: 0.3)
-    IF cp IN counterpartyBaseline:
-        IF txnAmount > 3 * counterpartyBaseline[cp].avgAmount:
-            score += 0.3
-            reasons.push("Amount ${txnAmount} is {ratio}x the average ${cp.avgAmount} for {cp}")
+    IF cp IN counterpartyBaseline AND txnAmount > 3 * counterpartyBaseline[cp].avgAmount:
+        score += 0.3
+        reasons.push("Amount ${txnAmount} is {ratio}x the baseline average ${cp.avgAmount} for {cp}")
 
     # 2. New counterparty (weight: 0.2)
     IF cp NOT IN counterpartyBaseline:
@@ -129,28 +112,23 @@ FOR EACH txn IN analysisTransactions:
             reasons.push("Frequency {currentFrequency}/week vs baseline {cp.frequency}/week")
 
     # 4. Category outlier (weight: 0.15)
-    IF cat IN categoryBaseline:
-        IF txnAmount > 2 * categoryBaseline[cat].avgAmount:
-            score += 0.15
-            reasons.push("Amount is {ratio}x the category average of ${cat.avgAmount}")
+    IF cat IN categoryBaseline AND txnAmount > 2 * categoryBaseline[cat].avgAmount:
+        score += 0.15
+        reasons.push("Amount is {ratio}x the category average of ${cat.avgAmount}")
 
     # 5. Time anomaly (weight: 0.15)
-    IF cp IN counterpartyBaseline:
-        IF dayOfWeek(txn.date) NOT IN counterpartyBaseline[cp].typicalDays:
-            score += 0.15
-            reasons.push("Transaction on {day} -- typically occurs on {typicalDays}")
+    IF cp IN counterpartyBaseline AND dayOfWeek(txn.date) NOT IN counterpartyBaseline[cp].typicalDays:
+        score += 0.15
+        reasons.push("Transaction on {day} -- typically occurs on {typicalDays}")
 
     txn.anomalyScore = score
     txn.anomalyReasons = reasons
 
-# Filter to flagged transactions
 flagged = analysisTransactions.filter(t => t.anomalyScore >= scoreThreshold)
 flagged.sortBy(anomalyScore, descending)
 ```
 
 ### Step 4: Present
-
-Format the anomaly report with context and baseline comparisons.
 
 ```
 1. Summary header:
@@ -162,36 +140,36 @@ Format the anomaly report with context and baseline comparisons.
 2. Ranked anomaly list:
    FOR EACH txn IN flagged (sorted by score descending):
        | Score | Date | Counterparty | Amount | Category |
-       Reasons: bullet list of what triggered the flag
-       Baseline context: historical average, frequency, typical timing
+       Reasons: bullet list of what triggered the flag.
+       Baseline context: historical average, frequency, typical timing.
 
 3. Anomaly breakdown by signal type:
-   - Count of amount anomalies triggered
-   - Count of new counterparties
-   - Count of frequency spikes
-   - Count of category outliers
-   - Count of time anomalies
+   - Amount anomalies
+   - New counterparties
+   - Frequency spikes
+   - Category outliers
+   - Time anomalies
 ```
 
 ## Example Output
 
 ```
-Anomaly Detection: Feb 27 - Mar 6, 2026
-Baseline: Dec 7, 2025 - Feb 27, 2026 (90 days)
-Transactions analyzed: 142 | Anomalies flagged: 4
+Anomaly Detection: Apr 22 - Apr 29, 2026
+Baseline: Jan 29, 2026 - Apr 22, 2026 (90 days)
+Transactions analyzed: 142 | Anomalies flagged: 3
 
 Flagged Transactions:
 
-1. Score: 0.65 | Mar 3 | "NewTech Solutions" | $18,500.00 | Software
+1. Score: 0.65 | Apr 25 | "NewTech Solutions" | $18,500.00 | Software
    - First transaction with counterparty 'NewTech Solutions' (+0.2)
    - Amount is 3.2x the Software category average of $1,622.50 (+0.15)
    - Amount $18,500.00 is 4.1x the average for similar vendors (+0.3)
 
-2. Score: 0.50 | Mar 5 | "AWS" | $28,900.00 | Cloud Services
+2. Score: 0.50 | Apr 27 | "AWS" | $28,900.00 | Cloud Services
    - Amount $28,900.00 is 3.4x the average $8,500.00 for AWS (+0.3)
    - Frequency 3/week vs baseline 0.8/week (+0.2)
 
-3. Score: 0.50 | Mar 1 | "Office Depot" | $4,200.00 | Office Supplies
+3. Score: 0.50 | Apr 23 | "Office Depot" | $4,200.00 | Office Supplies
    - Amount is 2.8x the category average of $617.00 (+0.15)
    - Transaction on Saturday -- typically occurs on Mon, Wed (+0.15)
    - Frequency 4/week vs baseline 1.5/week (+0.2)
@@ -206,9 +184,6 @@ Signal Breakdown:
 
 ## Tips
 
-- Always call `getCurrentDate` first before calculating any date ranges.
-- Handle pagination per mercury-shared rules -- never provide answers based on truncated or incomplete data.
-- Use programmatic computation for all scoring and baseline calculations per mercury-shared computational requirements.
-- A 90-day baseline gives reliable averages for most counterparties. For newer accounts with less history, note reduced baseline confidence in the output.
-- Transactions with multiple anomaly signals are more likely to be genuinely anomalous -- prioritize those with the highest composite scores.
-- Debit transactions (outgoing spend) have negative amounts in the Mercury API; use absolute values for comparisons.
+- A 90-day baseline gives reliable averages for most counterparties. For newer accounts with less history, surface that reduced confidence in the output.
+- Transactions with multiple anomaly signals are far more likely to be genuinely anomalous — prioritize composite scores.
+- Use `--transform 'transactions.#.{id,amount,counterpartyName,category,createdAt,postedAt}'` on both list calls to keep token usage down on a 90-day window.

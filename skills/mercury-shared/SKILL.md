@@ -1,74 +1,61 @@
 ---
 name: mercury-shared
-description: "Shared behavioral rules, auth patterns, pagination, date handling, and security guidance for all Mercury tools."
+description: "Shared rules for Mercury CLI skills: token-efficient format, pagination, date anchoring, and the debit-sign convention."
 metadata:
   version: "1.0.0"
   category: shared
   scopes: []
   requires: []
-  channels: [mcp, cli]
 ---
 
-# Mercury Shared Behavioral Rules
+# Mercury Shared Rules
 
-Mercury is a banking platform for startups and businesses. The Mercury API allows you to access accounts, transactions, recipients, and more. Data is returned directly from the API and can be processed with standard JSON operations.
+The `mercury` CLI handles authentication on its own. If `MERCURY_API_KEY` is set in the environment, the CLI uses it as a bearer token; otherwise it falls back to the OAuth token saved by `mercury login`. Either way, skills never construct auth headers or pass `--api-key` themselves — just invoke `mercury <command>` and the CLI picks the right credential. To check current auth state, run `mercury status`. If a call fails with 401/403, tell the user to either export `MERCURY_API_KEY` or run `mercury login`; do not retry.
 
-## Security & Auth
+These rules cover the few things that aren't obvious from `mercury --help`.
 
-- Authentication uses Bearer tokens via OAuth2.
-- **Never** expose tokens, credentials, or auth headers in responses to the user.
-- **Never** log or display full account numbers, routing numbers, or other sensitive PII.
-- Mask sensitive values when presenting data (e.g., show only last 4 digits of account numbers).
+## Use `--format jsonl` for reads
 
-## Date Handling
+`jsonl` collapses the response onto a single line with no indentation whitespace — the cheapest format to load into context. Use it for every read this skill performs:
 
-- **Always** get the current date before using dates in any tool call. Use the `getCurrentDate` tool.
-- All dates must be relative to the current date.
-  - Example: If the current date is 2025-09-10 and the user asks for "last month," use 2025-08-10 as the start date.
-- Never assume or hardcode today's date.
+```bash
+mercury accounts list --max-items -1 --format jsonl
+mercury transactions list --start 2026-04-01 --end 2026-04-29 --status sent --max-items -1 --format jsonl
+```
 
-## Truncation Handling
+Pair it with `--transform` (GJSON syntax — see https://github.com/tidwall/gjson/blob/master/SYNTAX.md) when you only need a few fields:
 
-When **any** tool returns "Result too long, truncated" anywhere in its response:
+```bash
+# Just the fields needed for spend analysis
+mercury transactions list --start 2026-04-01 --end 2026-04-29 --status sent \
+  --max-items -1 --format jsonl \
+  --transform 'transactions.#.{id,amount,counterpartyName,category,mercuryCategory,postedAt,createdAt}'
+```
 
-1. **Immediately** stop processing that response.
-2. Re-call the **same** tool with a smaller `limit` (reduce by 50% minimum).
-3. **Never** attempt to use truncated data or paginate forward from truncated results.
-4. Only after receiving complete (non-truncated) pages should you continue to paginate.
-5. **Never** provide answers based on truncated results -- this is a critical error.
+`--format json` is the colorized, pretty-printed version for humans — don't use it from a skill.
 
-## Pagination
+## Always pass `--max-items -1` for list commands
 
-When a user asks **any** question requiring complete data (totals, balances, aggregates, "most/least," "all transactions," comparisons, or any calculation across pages):
+Without it, the CLI returns the first page only. `--max-items -1` paginates through every page in a single call. Never answer questions that need full data ("total spend", "all transactions", "most/least") from a partial result.
 
-1. **Automatically** paginate through **all** pages without asking the user.
-2. Keep fetching until there are no more pages.
-3. If pagination would take more than 3 tool calls, ask the user to narrow down to a smaller time period.
-4. It is a **critical error** to answer before having fetched all pages.
+If a single call would still pull an unmanageable number of rows, narrow `--start`/`--end` or filter further (`--account-id`, `--category-id`, `--status`, `--search`) instead of accepting truncation.
 
-## Computational Requirements
+## Anchor dates against today
 
-For any query requiring sums, totals, averages, medians, modes, ranges, most/least, or other aggregations across accounts or transactions, calculations involving currency amounts, or comparisons of financial metrics:
+LLMs hallucinate dates. Before computing any window, run:
 
-1. **Always** use computational methods to calculate aggregates. Process data programmatically.
-2. Parse the JSON response and use JavaScript/Python to calculate results.
-3. Display intermediate steps for verification.
-4. **Never** rely on mental arithmetic for financial calculations.
-5. Double-check your calculations to make sure results are correct.
+```bash
+date +%Y-%m-%d
+```
 
-**Example -- "What's my total balance?"**
-- Correct: Parse accounts, map to balances, use `reduce()` to sum.
-- Incorrect: Manually adding up balance values.
+…and derive `--start`/`--end` relative to that. Never hardcode today.
 
-## Error Handling
+## Debit sign + amount formatting
 
-- **Transient errors** (timeouts, 5xx responses): Retry the request up to 2 times before reporting failure.
-- **Auth errors** (401, 403): Do not retry. Prompt the user to re-authenticate.
-- **Validation errors** (400): Report the specific error to the user so they can correct their request.
-- Never silently swallow errors -- always inform the user when something fails.
+- Mercury **debits (outgoing spend) are negative**; credits are positive. Use `abs(amount)` when comparing against receipt totals or summing spend.
+- Amounts are decimals: `10.00` = $10.00. Preserve full precision; only round when displaying.
+- Display amounts to users with `$` and two decimals (e.g. `$1,234.56`).
 
-## Amount Formatting
+## Never echo raw card or account numbers
 
-- USD amounts use decimal format: `10.00` = $10.00.
-- Preserve full precision from the API; do not round unless explicitly asked.
-- When displaying amounts to users, include the dollar sign and two decimal places (e.g., $1,234.56).
+The CLI may return full account/card numbers in responses. When showing data back to the user, mask everything except the last 4 (`****4821`).

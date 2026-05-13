@@ -11,6 +11,7 @@ skills/
   mercury-detect-anomaly/SKILL.md               # Baseline + anomaly scoring
   mercury-receipt-upload/SKILL.md               # Match a receipt image to a transaction and attach it
   mercury-autocategorize-transactions/SKILL.md  # Suggest categories for uncategorized transactions
+  mercury-receipt-finder/SKILL.md               # Find missing receipts in Photos & Gmail, then upload
 ```
 
 Each directory name matches the skill's `name` frontmatter field.
@@ -24,8 +25,9 @@ Each directory name matches the skill's `name` frontmatter field.
 | `mercury-detect-anomaly` | agentic | Builds 90d baselines and flags pattern breaks in a recent window |
 | `mercury-receipt-upload` | agentic | Reads a receipt image, finds the matching transaction, attaches via CLI |
 | `mercury-autocategorize-transactions` | agentic | Suggests categories from counterparty/merchant-type history, applies via CLI |
+| `mercury-receipt-finder` | agentic | Finds transactions missing receipts, searches macOS Photos and Gmail for matches, uploads via CLI |
 
-All four agentic skills depend on `mercury-shared` and use the `mercury` CLI (`../mercury-cli`) for every read and write.
+All five agentic skills depend on `mercury-shared` and use the `mercury` CLI (`../mercury-cli`) for every read and write.
 
 ## SKILL.md Format
 

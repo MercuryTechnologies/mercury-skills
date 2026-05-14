@@ -2,6 +2,8 @@
 
 Agent skills that drive the Mercury CLI. Each skill is a self-contained `SKILL.md` following the [Agent Skills](https://github.com/agentskills/agentskills) format ([spec](https://agentskills.io/specification)).
 
+Some skills are designed to pair with the close-process slash commands in [`MercuryTechnologies/mercury-finance`](https://github.com/MercuryTechnologies/mercury-finance). They produce the Mercury side of a workpaper (cash reconciliation, journal-entry source data) so the matching finance command can do the NetSuite / Numeric half. Such skills carry a banner pointing back to the source command.
+
 ## Structure
 
 ```
@@ -12,6 +14,7 @@ skills/
   mercury-receipt-upload/SKILL.md               # Match a receipt image to a transaction and attach it
   mercury-autocategorize-transactions/SKILL.md  # Suggest categories for uncategorized transactions
   mercury-journal-entry-prep/SKILL.md           # Source Data + Calculation + Journal Entry block for accounts-payable accrual / cash-reclassification entries
+  mercury-cash-reconciliation/SKILL.md          # Mercury side of a cash General Ledger reconciliation workpaper
 ```
 
 Each directory name matches the skill's `name` frontmatter field.
@@ -26,6 +29,7 @@ Each directory name matches the skill's `name` frontmatter field.
 | `mercury-receipt-upload` | agentic | Reads a receipt image, finds the matching transaction, attaches via CLI |
 | `mercury-autocategorize-transactions` | agentic | Suggests categories from counterparty/merchant-type history, applies via CLI |
 | `mercury-journal-entry-prep` | agentic | Source Data + Calculation + Journal Entry block for accounts-payable accrual or cash-reclassification entries sourced from Mercury transactions |
+| `mercury-cash-reconciliation` | agentic | Produces the Mercury side of a cash General Ledger reconciliation for a given account + period |
 
 All agentic skills depend on `mercury-shared` and use the `mercury` CLI (`../mercury-cli`) for every read and write.
 

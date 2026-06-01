@@ -17,7 +17,7 @@ Supports two entry types where the source data lives in Mercury:
 - **`ap-accrual`** (Accounts Payable accrual) — outgoing payments in the period that don't yet have an invoice or receipt attached. The accrual recognizes the expense even though the invoice hasn't been received.
 - **`cash-reclass`** — internal transfers and sweeps between Mercury accounts that need to be reclassified between cash sub-accounts on the General Ledger (GL).
 
-> Adapts `/je` from the `MercuryTechnologies/mercury-finance` repo. This skill produces the Mercury-sourced data blocks. NetSuite import, approval routing (Tracey / Christine / Dan / Michele), and posting stay in `mercury-finance`.
+> This skill produces only the Mercury-sourced data blocks. NetSuite import, approval routing, and posting stay in your finance close process and are handled by the user.
 
 This skill is **read-only by default**. The optional Step 7 (memo-tagging accrued transactions so they aren't double-counted next month) is the only write, and only fires after explicit user confirmation.
 
@@ -174,21 +174,21 @@ Save to `<outputDir>/mercury-je-<entryType>-<period>.md` and print to the conver
 
 **Total Debits:** $<sum>   **Total Credits:** $<sum>   **Difference:** $0.00 ✓
 
-## Review Checklist (from /je)
+## Review Checklist
 
 - [ ] Debits equal credits
 - [ ] Period is correct (<period>)
 - [ ] All GL accounts are valid (no `[GL?]` placeholders remain)
 - [ ] Department / cost center coded
 - [ ] Reversal flag set for next period
-- [ ] Approver identified: Tracey / Christine / Dan / Michele (Broker Dealer)
+- [ ] Approver identified (route per your close process; Broker Dealer entries may need a dedicated approver)
 ```
 
 **cash-reclass layout:** same three-block structure, but Source Data lists transfer legs (from-account, to-account, amount, date), Calculation pairs legs, and the JE has one row per pair debiting the destination cash GL sub-account and crediting the source.
 
 ### Step 6: Print the review checklist and stop
 
-The skill never posts the JE — NetSuite import is `mercury-finance`'s job. Print the workpaper path and tell the user it's ready to paste into the JE import template.
+The skill never posts the JE — NetSuite import is the user's job. Print the workpaper path and tell the user it's ready to paste into the JE import template.
 
 ### Step 7 (optional, write): Tag accrued transactions
 
@@ -245,7 +245,7 @@ Saved workpaper: ~/Downloads/mercury-je-ap-accrual-2026-04.md
 
 ## Tips
 
-- **Mapping file lives next to the data**, not committed to this repo. Christine maintains the canonical `mercuryCategory -> GL account` mapping in `mercury-finance` (or her Drive workpapers) — copy it locally, don't drift.
+- **Mapping file lives next to the data**, not committed to this repo. The canonical `mercuryCategory -> GL account` mapping is maintained by your finance team — copy it locally for each run, don't drift.
 - **Unmapped categories block posting.** Print them in a top-of-file call-out so they get fixed before the JE leaves the workpaper.
 - **Pending items belong to next month.** Don't accrue items that are still `status: pending` at period end — they'll post (with possibly different amounts) in the next period and get caught by next month's run.
 - **Reversal flag** — most AP accruals are auto-reversing in the following period. The review checklist surfaces this so it's not missed.

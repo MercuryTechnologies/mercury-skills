@@ -12,7 +12,7 @@ metadata:
 
 Pulls the Mercury side of a cash General Ledger (GL) reconciliation for a target Mercury account and accounting period. Produces a workpaper block formatted to match the standard Mercury Reconciliation Workbook — GL balance vs. Mercury balance, a reconciling-items table bucketed into timing / permanent / prior-period, tickmark legend, and sign-off line.
 
-> Adapts `/recon cash` from the `MercuryTechnologies/mercury-finance` repo. The other half of the workpaper (NetSuite GL pull, Numeric sync, JE adjustments) lives there — this skill only produces the Mercury side.
+> This skill produces only the Mercury side of the workpaper. The other half — the GL-system balance pull, accounting-tool sync, and any journal-entry adjustments — comes from your finance close process and is supplied by the user.
 
 This skill is **read-only by default**. The optional Step 7 (memo-tagging aged items) is the only write, and only fires after explicit user confirmation.
 
@@ -46,7 +46,7 @@ This skill is **read-only by default**. The optional Step 7 (memo-tagging aged i
 
 ### Step 2: Download the period statement (optional but recommended)
 
-The statement PDF is the authoritative source for the bank-side closing balance Christine ties to.
+The statement PDF is the authoritative source for the bank-side closing balance the reconciliation owner ties to.
 
 ```
 mercury statements download --account-id <accountId> --period <YYYY-MM> --output <outputDir>/mercury-rec-<accountSlug>-<period>.pdf
@@ -100,7 +100,7 @@ adjustedMercury = mercuryBalance
                   - (credits in transit / pending that haven't yet hit the bank)
                   + carryForwardTotal
 
-# At this stage the user (or the corresponding /recon run in mercury-finance) supplies the GL balance.
+# At this stage the user supplies the GL balance from the finance close process.
 # Difference = glBalance - adjustedMercury
 # Any non-zero difference is a "permanent" reconciling item -- bank fees, missing entries, errors.
 ```
@@ -198,7 +198,7 @@ Reconciling items:
 ## Tips
 
 - **Pull without `--status sent`** for this skill — pending and in-transit items are the whole point. The `mercury-shared` rule about defaulting to `sent` applies to spend-analysis skills, not reconciliation.
-- The Mercury statement PDF's printed closing balance is what Christine ties to. If you can't download it, surface that clearly and tie to `currentBalance` with a note.
-- If the GL balance isn't supplied, emit the workpaper with placeholders rather than skipping — Christine pastes the GL row in from `/recon` output on her side.
+- The Mercury statement PDF's printed closing balance is what the reconciliation owner ties to. If you can't download it, surface that clearly and tie to `currentBalance` with a note.
+- If the GL balance isn't supplied, emit the workpaper with placeholders rather than skipping — the reconciliation owner pastes the GL row in from the finance close process on their side.
 - For Broker Dealer / restricted-cash subaccounts, the entity number matters for the J-file. Confirm with the user which entity context the account belongs to before emitting the workpaper.
 - Aged items 60+ days old should be flagged to the user verbally, not just included in the table — they may need an adjusting entry rather than another month of carry-forward.

@@ -41,6 +41,7 @@ skills/
   mercury-autocategorize-transactions/SKILL.md  # Suggest categories for uncategorized transactions
   mercury-journal-entry-prep/SKILL.md           # Source Data + Calculation + Journal Entry block for accounts-payable accrual / cash-reclassification entries
   mercury-cash-reconciliation/SKILL.md          # Mercury side of a cash General Ledger reconciliation workpaper
+  mercury-onboarding-apply/SKILL.md             # Generate, fill, and submit a Mercury onboarding application via the CLI
 ```
 
 Each directory name matches the skill's `name` frontmatter field.
@@ -56,6 +57,7 @@ Each directory name matches the skill's `name` frontmatter field.
 | `mercury-autocategorize-transactions` | agentic | Suggests categories from counterparty/merchant-type history, applies via CLI |
 | `mercury-journal-entry-prep` | agentic | Source Data + Calculation + Journal Entry block for accounts-payable accrual or cash-reclassification entries sourced from Mercury transactions |
 | `mercury-cash-reconciliation` | agentic | Produces the Mercury side of a cash General Ledger reconciliation for a given account + period |
+| `mercury-onboarding-apply` | agentic | Generates a blank application template, fills it with user-supplied KYC details, confirms, and submits via CLI |
 
 All agentic skills depend on `mercury-shared` and use the `mercury` CLI for every read and write.
 

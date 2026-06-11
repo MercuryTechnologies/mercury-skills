@@ -39,6 +39,7 @@ skills/
   mercury-detect-anomaly/SKILL.md               # Baseline + anomaly scoring
   mercury-receipt-upload/SKILL.md               # Match a receipt image to a transaction and attach it
   mercury-autocategorize-transactions/SKILL.md  # Suggest categories for uncategorized transactions
+  mercury-receipt-finder/SKILL.md               # Find missing receipts in Photos & Gmail, then upload
   mercury-journal-entry-prep/SKILL.md           # Source Data + Calculation + Journal Entry block for accounts-payable accrual / cash-reclassification entries
   mercury-cash-reconciliation/SKILL.md          # Mercury side of a cash General Ledger reconciliation workpaper
   mercury-onboarding-apply/SKILL.md             # Generate, fill, and submit a Mercury onboarding application via the CLI
@@ -55,6 +56,7 @@ Each directory name matches the skill's `name` frontmatter field.
 | `mercury-detect-anomaly` | agentic | Builds 90-day baselines and flags pattern breaks in a recent window |
 | `mercury-receipt-upload` | agentic | Reads a receipt image, finds the matching transaction, attaches via CLI |
 | `mercury-autocategorize-transactions` | agentic | Suggests categories from counterparty/merchant-type history, applies via CLI |
+| `mercury-receipt-finder` | agentic | Finds transactions missing receipts, searches macOS Photos and Gmail for matches, uploads via CLI |
 | `mercury-journal-entry-prep` | agentic | Source Data + Calculation + Journal Entry block for accounts-payable accrual or cash-reclassification entries sourced from Mercury transactions |
 | `mercury-cash-reconciliation` | agentic | Produces the Mercury side of a cash General Ledger reconciliation for a given account + period |
 | `mercury-onboarding-apply` | agentic | Generates a blank application template, fills it with user-supplied KYC details, confirms, and submits via CLI |

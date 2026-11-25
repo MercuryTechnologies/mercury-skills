@@ -17,7 +17,7 @@ Analyze spending patterns across Mercury accounts with categorized breakdowns, c
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `dateRange` | Last 30 days | Start and end dates for the analysis window |
-| `accountFilter` | All accounts | List of specific account IDs to include |
+| `accountFilter` | All checking and savings accounts | List of specific account IDs to include |
 | `categoryFilter` | All categories | Limit analysis to specific transaction categories |
 
 ## Execution Strategy
@@ -26,7 +26,7 @@ Analyze spending patterns across Mercury accounts with categorized breakdowns, c
 
 ```
 1. Run `date +%Y-%m-%d` to get today's date.
-2. Run `mercury accounts list --max-items -1 --format jsonl` to get all accounts.
+2. Run `mercury accounts list --max-items -1 --format jsonl` to get checking and savings accounts.
 3. Apply accountFilter if provided, otherwise use every active account.
 4. Calculate the date range:
    - IF user specified a range: use it.
